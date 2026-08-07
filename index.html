@@ -202,8 +202,8 @@
   @media (prefers-reduced-motion: reduce){ .champion-banner{ animation:none; } }
   @keyframes shimmer{ 0%{background-position:0% 0;} 100%{background-position:200% 0;} }
 
-  .conn-line{ fill:none; stroke:var(--line); stroke-width:2; }
-  .conn-line.done{ stroke:var(--clay); stroke-width:2.2; }
+  .conn-line{ fill:none; stroke:var(--line); stroke-width:1.5; opacity:0.45; }
+  .conn-line.done{ stroke:var(--clay); stroke-width:2; opacity:0.8; }
 
   @media (max-width:900px){
     #connSvg{ display:none; }
@@ -256,8 +256,8 @@
       <table class="sched-table">
         <tr><td>Tue 1 Sep</td><td class="times">Afternoon — R1-1, R1-2</td></tr>
         <tr><td>Wed 2 Sep</td><td class="times">Morning — R1-3, R1-4 · Afternoon — R1-5, R1-6, R1-7, R1-8</td></tr>
-        <tr><td>Thu 3 Sep</td><td class="times">Morning — R1-9, R1-10 (no further court time this day)</td></tr>
-        <tr><td>Fri 4 Sep</td><td class="times">Morning — R1-11, R1-12, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
+        <tr><td>Thu 3 Sep</td><td class="times">Morning — R24-9, R24-10 (no further court time this day)</td></tr>
+        <tr><td>Fri 4 Sep</td><td class="times">Morning — R24-11, R24-12, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
       </table>
       <div class="sun-note">Times above are a rough guide — teams will confirm exact slots closer to the day. The court has no lights, so everything needs to wrap up before sundown, roughly 7:30pm in Kumlubük in early September.</div>
     </div>
@@ -341,25 +341,25 @@ function winnerOf(of){ return {type:'winner', of}; }
 function rank(n){ return {type:'rank', n}; }
 
 const matches = {
-  'R1-1':  {round:'R1',    a:team('P9'),        b:team('P12'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
-  'R1-2':  {round:'R1',    a:team('P22'),       b:team('P14'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
-  'R1-3':  {round:'R1',    a:team('P2'),        b:team('P4'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
-  'R1-4':  {round:'R1',    a:team('P6'),        b:team('P17'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
-  'R1-5':  {round:'R1',    a:team('P1'),        b:team('P5'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-6':  {round:'R1',    a:team('P7'),        b:team('P8'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-7':  {round:'R1',    a:team('P13'),       b:team('P15'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-8':  {round:'R1',    a:team('P16'),       b:team('P21'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-9':  {round:'R1',    a:team('P18'),       b:team('P19'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
-  'R1-10': {round:'R1',    a:team('P3'),        b:team('P10'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
-  'R1-11': {round:'R1',    a:team('P23'),       b:team('P24'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
-  'R1-12': {round:'R1',    a:team('P11'),       b:team('P20'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'R24-1':  {round:'R24',   a:team('P9'),        b:team('P12'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R24-2':  {round:'R24',   a:team('P22'),       b:team('P14'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R24-3':  {round:'R24',   a:team('P2'),        b:team('P4'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R24-4':  {round:'R24',   a:team('P6'),        b:team('P17'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R24-5':  {round:'R24',   a:team('P1'),        b:team('P5'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-6':  {round:'R24',   a:team('P7'),        b:team('P8'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-7':  {round:'R24',   a:team('P13'),       b:team('P15'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-8':  {round:'R24',   a:team('P16'),       b:team('P21'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-9':  {round:'R24',   a:team('P18'),       b:team('P19'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R24-10': {round:'R24',   a:team('P3'),        b:team('P10'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R24-11': {round:'R24',   a:team('P23'),       b:team('P24'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'R24-12': {round:'R24',   a:team('P11'),       b:team('P20'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
 
-  'RO12-A':{round:'RO12',  a:winnerOf('R1-1'),  b:winnerOf('R1-2'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-B':{round:'RO12',  a:winnerOf('R1-3'),  b:winnerOf('R1-4'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-C':{round:'RO12',  a:winnerOf('R1-5'),  b:winnerOf('R1-6'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-D':{round:'RO12',  a:winnerOf('R1-7'),  b:winnerOf('R1-8'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-E':{round:'RO12',  a:winnerOf('R1-9'),  b:winnerOf('R1-10'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-F':{round:'RO12',  a:winnerOf('R1-11'), b:winnerOf('R1-12'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-A':{round:'RO12',  a:winnerOf('R24-1'), b:winnerOf('R24-2'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-B':{round:'RO12',  a:winnerOf('R24-3'), b:winnerOf('R24-4'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-C':{round:'RO12',  a:winnerOf('R24-5'), b:winnerOf('R24-6'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-D':{round:'RO12',  a:winnerOf('R24-7'), b:winnerOf('R24-8'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-E':{round:'RO12',  a:winnerOf('R24-9'), b:winnerOf('R24-10'),scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-F':{round:'RO12',  a:winnerOf('R24-11'),b:winnerOf('R24-12'),scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
 
   'REP1':  {round:'REP',   a:rank(5),           b:rank(8),           scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
   'REP2':  {round:'REP',   a:rank(6),           b:rank(7),           scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
@@ -377,19 +377,15 @@ const matches = {
 const RO12_ORDER = ['RO12-A','RO12-B','RO12-C','RO12-D','RO12-E','RO12-F'];
 
 const CONNECTORS = [
-  ['card-R1-1','slot-RO12-A-A'], ['card-R1-2','slot-RO12-A-B'],
-  ['card-R1-3','slot-RO12-B-A'], ['card-R1-4','slot-RO12-B-B'],
-  ['card-R1-5','slot-RO12-C-A'], ['card-R1-6','slot-RO12-C-B'],
-  ['card-R1-7','slot-RO12-D-A'], ['card-R1-8','slot-RO12-D-B'],
-  ['card-R1-9','slot-RO12-E-A'], ['card-R1-10','slot-RO12-E-B'],
-  ['card-R1-11','slot-RO12-F-A'],['card-R1-12','slot-RO12-F-B'],
-  ['rank-row-1','slot-SF1-A'],   ['rank-row-2','slot-SF2-A'],
-  ['rank-row-3','slot-QF1-A'],   ['rank-row-4','slot-QF2-A'],
-  ['rank-row-5','slot-REP1-A'],  ['rank-row-8','slot-REP1-B'],
-  ['rank-row-6','slot-REP2-A'],  ['rank-row-7','slot-REP2-B'],
-  ['card-REP1','slot-QF1-B'],    ['card-REP2','slot-QF2-B'],
-  ['card-QF1','slot-SF1-B'],     ['card-QF2','slot-SF2-B'],
-  ['card-SF1','slot-FINAL-A'],   ['card-SF2','slot-FINAL-B'],
+  ['card-R24-1', 'slot-RO12-A-A'], ['card-R24-2', 'slot-RO12-A-B'],
+  ['card-R24-3', 'slot-RO12-B-A'], ['card-R24-4', 'slot-RO12-B-B'],
+  ['card-R24-5', 'slot-RO12-C-A'], ['card-R24-6', 'slot-RO12-C-B'],
+  ['card-R24-7', 'slot-RO12-D-A'], ['card-R24-8', 'slot-RO12-D-B'],
+  ['card-R24-9', 'slot-RO12-E-A'], ['card-R24-10','slot-RO12-E-B'],
+  ['card-R24-11','slot-RO12-F-A'], ['card-R24-12','slot-RO12-F-B'],
+  ['card-REP1',  'slot-QF1-B'],    ['card-REP2',  'slot-QF2-B'],
+  ['card-QF1',   'slot-SF1-B'],    ['card-QF2',   'slot-SF2-B'],
+  ['card-SF1',   'slot-FINAL-A'],  ['card-SF2',   'slot-FINAL-B'],
 ];
 
 // ============================================================
@@ -550,8 +546,9 @@ function matchCard(id){
   const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
   const bothReady = aSlot.ready && bSlot.ready;
   const winner = bothReady ? getWinner(m) : null;
-  const isFinal = m.round === 'FINAL';
-  const isSF    = m.round === 'SF';
+  const isFinal  = m.round === 'FINAL';
+  const isSF     = m.round === 'SF';
+  const isFast4  = !isFinal && !isSF;
   const tagText = isFinal ? '🏆 GRAND FINAL' : id;
 
   function slotRow(slot, side){
@@ -663,7 +660,7 @@ function render(){
 
   const colsHTML = [
     col('Round of 24','Fast4 · 12 matches',
-      ['R1-1','R1-2','R1-3','R1-4','R1-5','R1-6','R1-7','R1-8','R1-9','R1-10','R1-11','R1-12'].map(matchCard).join('')),
+      ['R24-1','R24-2','R24-3','R24-4','R24-5','R24-6','R24-7','R24-8','R24-9','R24-10','R24-11','R24-12'].map(matchCard).join('')),
     col('Round of 12','Fast4', RO12_ORDER.map(matchCard).join('')),
     `<div class="col" style="width:230px;">${rankingColumnHTML()}</div>`,
     col('Repechage','Fast4', ['REP1','REP2'].map(matchCard).join('')),
@@ -701,9 +698,9 @@ function drawConnectors(){
     const y1 = fr.top    - wrapRect.top + fr.height/2;
     const x2 = tr.left   - wrapRect.left;
     const y2 = tr.top    - wrapRect.top + tr.height/2;
-    const midX = x1 + (x2-x1)/2;
+    const cp = (x2-x1) * 0.45;
     const done = fromEl.classList.contains('complete') || fromEl.classList.contains('rank-row');
-    paths += `<path class="conn-line ${done?'done':''}" d="M ${x1} ${y1} H ${midX} V ${y2} H ${x2}"/>`;
+    paths += `<path class="conn-line ${done?'done':''}" d="M ${x1} ${y1} C ${x1+cp} ${y1} ${x2-cp} ${y2} ${x2} ${y2}"/>`;
   });
   svg.innerHTML = paths;
 }
@@ -743,8 +740,23 @@ document.getElementById('columns').addEventListener('input', e=>{
 
   const matchId = t.dataset.match;
   const side    = t.dataset.side;
-  const val     = t.value === '' ? null : Math.max(0, parseInt(t.value,10));
-  matches[matchId][side] = (val == null || isNaN(val)) ? null : val;
+  let   val     = t.value === '' ? null : Math.max(0, parseInt(t.value,10));
+  if(val != null && isNaN(val)) val = null;
+  matches[matchId][side] = val;
+
+  // Fast4: total games must not exceed 4
+  const m = matches[matchId];
+  if(val != null && !['SF','FINAL'].includes(m.round)){
+    if(side === 'scoreA' && m.scoreB != null && val + m.scoreB > 4){
+      val = Math.max(0, 4 - m.scoreB);
+      matches[matchId].scoreA = val;
+      t.value = val;
+    } else if(side === 'scoreB' && m.scoreA != null && val + m.scoreA > 4){
+      val = Math.max(0, 4 - m.scoreA);
+      matches[matchId].scoreB = val;
+      t.value = val;
+    }
+  }
 
   saveToFirebase(matchId);
 
