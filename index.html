@@ -566,7 +566,7 @@ function matchCard(id){
       if(IS_ADMIN){
         const maxVal = isSF ? 7 : 4;
         scoreEl = `<input class="score-box" type="number" min="0" max="${maxVal}" inputmode="numeric"
-          id="score-${id}-${side}" data-match="${id}" data-side="${side}"
+          id="score-${id}-${side}" data-match="${id}" data-side="score${side}"
           value="${scoreVal==null?'':scoreVal}">`;
       } else if(scoreVal != null){
         scoreEl = `<span class="score-display">${scoreVal}</span>`;
