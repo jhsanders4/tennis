@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Dionysos Open — Live Bracket</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -29,6 +31,13 @@
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:var(--font-body);}
   body{padding-bottom:60px;}
+
+  /* ---------- ADMIN BANNER ---------- */
+  .admin-banner{
+    background:var(--turf-deep);color:var(--turf-light);
+    font-family:var(--font-mono);font-size:12px;text-align:center;
+    padding:8px 16px;letter-spacing:0.1em;text-transform:uppercase;
+  }
 
   /* ---------- HERO ---------- */
   .hero{
@@ -132,6 +141,44 @@
   .tie-warn{ font-size:11px; color:var(--error); padding:0 10px 8px; margin-top:-4px; }
   .pending-note{ font-size:11.5px; color:var(--muted); padding:10px; font-style:italic; text-align:center; }
 
+  /* Public read-only score chip */
+  .score-display{
+    width:38px; height:30px; display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:700; font-size:14px;
+    background:var(--turf-deep); color:var(--clay-light); border-radius:5px; flex:0 0 auto;
+  }
+
+  /* Tiebreak row */
+  .tb-row{
+    display:flex; align-items:center; gap:8px; padding:6px 10px;
+    background:rgba(193,85,46,0.06); border-top:1px dashed var(--line);
+  }
+  .tb-label{
+    font-family:var(--font-mono); font-size:10.5px; color:var(--clay-deep);
+    text-transform:uppercase; letter-spacing:0.07em; flex:1;
+  }
+  .tb-sep, .set-sep{
+    font-family:var(--font-mono); font-weight:700; color:var(--muted); padding:0 2px;
+  }
+  .tb-score{
+    font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--clay-deep);
+  }
+  .tb-box{ width:34px !important; }
+
+  /* Final score section */
+  .final-score-section{
+    padding:6px 10px 8px; border-top:1px dashed var(--line);
+    background:rgba(193,85,46,0.04); display:flex; flex-direction:column; gap:4px;
+  }
+  .final-set-row{ display:flex; align-items:center; gap:6px; padding:2px 0; }
+  .set-label{
+    font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase;
+    letter-spacing:0.07em; color:var(--clay-deep); width:72px; flex:0 0 auto;
+  }
+  .final-score-pub{
+    font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--clay-deep); padding:4px 0;
+  }
+
   /* Ranking column */
   .rank-row{ display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:7px; font-size:12.5px; }
   .rank-row .n{ font-family:var(--font-mono); font-weight:700; width:20px; }
@@ -168,6 +215,8 @@
 </head>
 <body>
 
+<div id="adminBanner" style="display:none" class="admin-banner">⚙ Admin Mode — scores are live</div>
+
 <div class="hero">
   <div class="hero-eyebrow">Jordan &amp; Lydia · Wedding Week · Tennis Tournament · 24 Teams</div>
   <h1>The Dionysos Open</h1>
@@ -179,7 +228,7 @@
   </div>
   <div class="hero-actions">
     <button class="btn btn-primary" id="scrollFinalBtn">Jump to Grand Final →</button>
-    <button class="btn btn-ghost" id="resetBtn">Reset all scores</button>
+    <button class="btn btn-ghost" id="resetBtn" style="display:none">Reset all scores</button>
   </div>
 </div>
 
@@ -189,9 +238,9 @@
     <div>
       <h4>Format &amp; scoring</h4>
       <ul>
-        <li><strong>Round of 24, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — 4 games, one serve each, no-ad. Enter games won by each team.</li>
-        <li><strong>Semifinal:</strong> best of 1 set, no-ad, tiebreak at 6-6. Enter games/sets won.</li>
-        <li><strong>Grand Final:</strong> best of 2 sets — match tiebreak decider if 1–1. Enter sets won.</li>
+        <li><strong>Round of 24, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — 4 games, one serve each, no-ad. At 2–2 a 7-point tiebreak decides the match.</li>
+        <li><strong>Semifinal:</strong> best of 1 set, no-ad, tiebreak at 6–6.</li>
+        <li><strong>Grand Final:</strong> best of 2 sets — match tiebreak decider if 1–1.</li>
       </ul>
       <h4 style="margin-top:14px;">How the repechage works</h4>
       <ul>
@@ -223,9 +272,43 @@
 </div>
 
 <script>
-// ---------------------------------------------------------------------
+// ============================================================
+// FIREBASE
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyAaIwUMqg2O13OIOEfIHR9TfXimUiGCYkQ",
+  authDomain: "dionysos-open.firebaseapp.com",
+  projectId: "dionysos-open",
+  storageBucket: "dionysos-open.firebasestorage.app",
+  messagingSenderId: "210643719567",
+  appId: "1:210643719567:web:6fda373fc1ca8ff561e7fa"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ============================================================
+// ADMIN MODE
+// ============================================================
+const ADMIN_PASSWORD = 'tennis2026';
+
+const IS_ADMIN = (()=>{
+  if(!new URLSearchParams(location.search).has('admin')) return false;
+  if(sessionStorage.getItem('adminAuth') === '1') return true;
+  const pw = prompt('Admin password:');
+  if(pw === ADMIN_PASSWORD){ sessionStorage.setItem('adminAuth','1'); return true; }
+  alert('Wrong password.');
+  history.replaceState(null,'',location.pathname);
+  return false;
+})();
+
+if(IS_ADMIN){
+  document.getElementById('adminBanner').style.display = 'block';
+  document.getElementById('resetBtn').style.display = '';
+}
+
+// ============================================================
 // DATA
-// ---------------------------------------------------------------------
+// ============================================================
 const TEAMS = {
   P1:  "Bo O'Brien & Sarah Simpson",
   P2:  "James Carlile & Lydia Turman",
@@ -258,36 +341,37 @@ function winnerOf(of){ return {type:'winner', of}; }
 function rank(n){ return {type:'rank', n}; }
 
 const matches = {
-  'R1-1':  {round:'R1', a:team('P9'),  b:team('P12'), scoreA:null, scoreB:null, when:'Tue 1 Sep · Afternoon'},
-  'R1-2':  {round:'R1', a:team('P22'), b:team('P14'), scoreA:null, scoreB:null, when:'Tue 1 Sep · Afternoon'},
-  'R1-3':  {round:'R1', a:team('P2'),  b:team('P4'),  scoreA:null, scoreB:null, when:'Wed 2 Sep · Morning'},
-  'R1-4':  {round:'R1', a:team('P6'),  b:team('P17'), scoreA:null, scoreB:null, when:'Wed 2 Sep · Morning'},
-  'R1-5':  {round:'R1', a:team('P1'),  b:team('P5'),  scoreA:null, scoreB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-6':  {round:'R1', a:team('P7'),  b:team('P8'),  scoreA:null, scoreB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-7':  {round:'R1', a:team('P13'), b:team('P15'), scoreA:null, scoreB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-8':  {round:'R1', a:team('P16'), b:team('P21'), scoreA:null, scoreB:null, when:'Wed 2 Sep · Afternoon'},
-  'R1-9':  {round:'R1', a:team('P18'), b:team('P19'), scoreA:null, scoreB:null, when:'Thu 3 Sep · Morning'},
-  'R1-10': {round:'R1', a:team('P3'),  b:team('P10'), scoreA:null, scoreB:null, when:'Thu 3 Sep · Morning'},
-  'R1-11': {round:'R1', a:team('P23'), b:team('P24'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
-  'R1-12': {round:'R1', a:team('P11'), b:team('P20'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
+  'R1-1':  {round:'R1',    a:team('P9'),        b:team('P12'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R1-2':  {round:'R1',    a:team('P22'),       b:team('P14'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R1-3':  {round:'R1',    a:team('P2'),        b:team('P4'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R1-4':  {round:'R1',    a:team('P6'),        b:team('P17'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R1-5':  {round:'R1',    a:team('P1'),        b:team('P5'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R1-6':  {round:'R1',    a:team('P7'),        b:team('P8'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R1-7':  {round:'R1',    a:team('P13'),       b:team('P15'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R1-8':  {round:'R1',    a:team('P16'),       b:team('P21'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R1-9':  {round:'R1',    a:team('P18'),       b:team('P19'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R1-10': {round:'R1',    a:team('P3'),        b:team('P10'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R1-11': {round:'R1',    a:team('P23'),       b:team('P24'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'R1-12': {round:'R1',    a:team('P11'),       b:team('P20'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
 
-  'RO12-A': {round:'RO12', a:winnerOf('R1-1'),  b:winnerOf('R1-2'),  scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-B': {round:'RO12', a:winnerOf('R1-3'),  b:winnerOf('R1-4'),  scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-C': {round:'RO12', a:winnerOf('R1-5'),  b:winnerOf('R1-6'),  scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-D': {round:'RO12', a:winnerOf('R1-7'),  b:winnerOf('R1-8'),  scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-E': {round:'RO12', a:winnerOf('R1-9'),  b:winnerOf('R1-10'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
-  'RO12-F': {round:'RO12', a:winnerOf('R1-11'), b:winnerOf('R1-12'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-A':{round:'RO12',  a:winnerOf('R1-1'),  b:winnerOf('R1-2'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-B':{round:'RO12',  a:winnerOf('R1-3'),  b:winnerOf('R1-4'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-C':{round:'RO12',  a:winnerOf('R1-5'),  b:winnerOf('R1-6'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-D':{round:'RO12',  a:winnerOf('R1-7'),  b:winnerOf('R1-8'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-E':{round:'RO12',  a:winnerOf('R1-9'),  b:winnerOf('R1-10'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-F':{round:'RO12',  a:winnerOf('R1-11'), b:winnerOf('R1-12'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
 
-  'REP1': {round:'REP', a:rank(5), b:rank(8), scoreA:null, scoreB:null, when:'Fri 4 Sep · Afternoon'},
-  'REP2': {round:'REP', a:rank(6), b:rank(7), scoreA:null, scoreB:null, when:'Fri 4 Sep · Afternoon'},
+  'REP1':  {round:'REP',   a:rank(5),           b:rank(8),           scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'REP2':  {round:'REP',   a:rank(6),           b:rank(7),           scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
 
-  'QF1': {round:'QF', a:rank(3), b:winnerOf('REP1'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Afternoon'},
-  'QF2': {round:'QF', a:rank(4), b:winnerOf('REP2'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Afternoon'},
+  'QF1':   {round:'QF',    a:rank(3),           b:winnerOf('REP1'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'QF2':   {round:'QF',    a:rank(4),           b:winnerOf('REP2'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
 
-  'SF1': {round:'SF', a:rank(1), b:winnerOf('QF1'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Afternoon'},
-  'SF2': {round:'SF', a:rank(2), b:winnerOf('QF2'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Afternoon'},
+  'SF1':   {round:'SF',    a:rank(1),           b:winnerOf('QF1'),   scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'SF2':   {round:'SF',    a:rank(2),           b:winnerOf('QF2'),   scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
 
-  'FINAL': {round:'FINAL', a:winnerOf('SF1'), b:winnerOf('SF2'), scoreA:null, scoreB:null, when:'Fri 4 Sep · Late Afternoon'},
+  'FINAL': {round:'FINAL', a:winnerOf('SF1'),   b:winnerOf('SF2'),
+            s1A:null,s1B:null,s2A:null,s2B:null,mbA:null,mbB:null,   when:'Fri 4 Sep · Late Afternoon'},
 };
 
 const RO12_ORDER = ['RO12-A','RO12-B','RO12-C','RO12-D','RO12-E','RO12-F'];
@@ -299,19 +383,19 @@ const CONNECTORS = [
   ['card-R1-7','slot-RO12-D-A'], ['card-R1-8','slot-RO12-D-B'],
   ['card-R1-9','slot-RO12-E-A'], ['card-R1-10','slot-RO12-E-B'],
   ['card-R1-11','slot-RO12-F-A'],['card-R1-12','slot-RO12-F-B'],
-  ['rank-row-1','slot-SF1-A'],  ['rank-row-2','slot-SF2-A'],
-  ['rank-row-3','slot-QF1-A'],  ['rank-row-4','slot-QF2-A'],
-  ['rank-row-5','slot-REP1-A'], ['rank-row-8','slot-REP1-B'],
-  ['rank-row-6','slot-REP2-A'], ['rank-row-7','slot-REP2-B'],
-  ['card-REP1','slot-QF1-B'],   ['card-REP2','slot-QF2-B'],
-  ['card-QF1','slot-SF1-B'],    ['card-QF2','slot-SF2-B'],
-  ['card-SF1','slot-FINAL-A'],  ['card-SF2','slot-FINAL-B'],
+  ['rank-row-1','slot-SF1-A'],   ['rank-row-2','slot-SF2-A'],
+  ['rank-row-3','slot-QF1-A'],   ['rank-row-4','slot-QF2-A'],
+  ['rank-row-5','slot-REP1-A'],  ['rank-row-8','slot-REP1-B'],
+  ['rank-row-6','slot-REP2-A'],  ['rank-row-7','slot-REP2-B'],
+  ['card-REP1','slot-QF1-B'],    ['card-REP2','slot-QF2-B'],
+  ['card-QF1','slot-SF1-B'],     ['card-QF2','slot-SF2-B'],
+  ['card-SF1','slot-FINAL-A'],   ['card-SF2','slot-FINAL-B'],
 ];
 
-// ---------------------------------------------------------------------
+// ============================================================
 // RESOLUTION ENGINE
-// ---------------------------------------------------------------------
-let ranking = null; // computed each render pass
+// ============================================================
+let ranking = null;
 
 function teamName(id){ return id ? TEAMS[id] : ''; }
 
@@ -329,15 +413,41 @@ function resolveSlot(slot){
     if(!ranking) return {teamId:null, label:`Seed: Rank ${slot.n}`, ready:false};
     const teamId = ranking[slot.n-1] || null;
     if(!teamId) return {teamId:null, label:`Seed: Rank ${slot.n}`, ready:false};
-    return {teamId, label:teamName(teamId), ready:true, rankN:slot.n};
+    return {teamId, label:teamName(teamId), ready:true};
   }
 }
 
+function setWinnerSide(gA, gB){
+  if(gA == null || gB == null || gA === gB) return null;
+  return gA > gB ? 'A' : 'B';
+}
+
 function getWinner(m){
-  if(m.scoreA==null || m.scoreB==null || m.scoreA===m.scoreB) return null;
   const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
   if(!aSlot.ready || !bSlot.ready) return null;
-  return m.scoreA > m.scoreB ? aSlot.teamId : bSlot.teamId;
+  const aId = aSlot.teamId, bId = bSlot.teamId;
+
+  if(m.round === 'FINAL'){
+    const s1W = setWinnerSide(m.s1A, m.s1B);
+    const s2W = setWinnerSide(m.s2A, m.s2B);
+    if(!s1W || !s2W) return null;
+    if(s1W === s2W) return s1W === 'A' ? aId : bId;
+    if(m.mbA == null || m.mbB == null || m.mbA === m.mbB) return null;
+    return m.mbA > m.mbB ? aId : bId;
+  }
+
+  // Fast4 (R1, RO12, REP, QF) or SF
+  const tieAt = m.round === 'SF' ? 6 : 2;
+  const {scoreA, scoreB, tbA, tbB} = m;
+  if(scoreA == null || scoreB == null) return null;
+  if(scoreA === scoreB){
+    if(scoreA === tieAt){
+      if(tbA == null || tbB == null || tbA === tbB) return null;
+      return tbA > tbB ? aId : bId;
+    }
+    return null;
+  }
+  return scoreA > scoreB ? aId : bId;
 }
 
 function computeRanking(){
@@ -352,42 +462,138 @@ function computeRanking(){
     const winnerGames = aIsWinner ? m.scoreA : m.scoreB;
     const loserGames  = aIsWinner ? m.scoreB : m.scoreA;
     const loserId = aIsWinner ? bSlot.teamId : aSlot.teamId;
-    entries.push({teamId:w, games:winnerGames, isWinner:true, idx:i});
-    entries.push({teamId:loserId, games:loserGames, isWinner:false, idx:i});
+    entries.push({teamId:w,       games:winnerGames, isWinner:true,  idx:i});
+    entries.push({teamId:loserId, games:loserGames,  isWinner:false, idx:i});
   }
   entries.sort((x,y)=> y.games-x.games || (x.isWinner===y.isWinner?0:(x.isWinner?-1:1)) || x.idx-y.idx);
   return entries.map(e=>e.teamId);
 }
 
-// ---------------------------------------------------------------------
+// ============================================================
+// SCORE SECTION BUILDERS
+// ============================================================
+function buildTbRow(id, m, isSF){
+  const label = isSF ? 'Set tiebreak' : 'Tiebreak';
+  if(IS_ADMIN){
+    return `<div class="tb-row">
+      <span class="tb-label">${label}</span>
+      <input class="score-box tb-box" type="number" min="0" max="7" inputmode="numeric"
+        id="score-${id}-tbA" data-match="${id}" data-side="tbA"
+        value="${m.tbA==null?'':m.tbA}">
+      <span class="tb-sep">–</span>
+      <input class="score-box tb-box" type="number" min="0" max="7" inputmode="numeric"
+        id="score-${id}-tbB" data-match="${id}" data-side="tbB"
+        value="${m.tbB==null?'':m.tbB}">
+    </div>`;
+  }
+  if(m.tbA != null && m.tbB != null){
+    return `<div class="tb-row">
+      <span class="tb-label">${label}</span>
+      <span class="tb-score">${m.tbA}–${m.tbB}</span>
+    </div>`;
+  }
+  return '';
+}
+
+function buildFinalSection(id, m){
+  const {s1A,s1B,s2A,s2B,mbA,mbB} = m;
+  const s1W = setWinnerSide(s1A, s1B);
+  const s2W = setWinnerSide(s2A, s2B);
+  const isDecider = s1W && s2W && s1W !== s2W;
+
+  if(IS_ADMIN){
+    const set1 = `<div class="final-set-row">
+      <span class="set-label">Set 1</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s1A" data-match="${id}" data-side="s1A"
+        value="${s1A==null?'':s1A}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s1B" data-match="${id}" data-side="s1B"
+        value="${s1B==null?'':s1B}">
+    </div>`;
+    const set2 = s1W ? `<div class="final-set-row">
+      <span class="set-label">Set 2</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s2A" data-match="${id}" data-side="s2A"
+        value="${s2A==null?'':s2A}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s2B" data-match="${id}" data-side="s2B"
+        value="${s2B==null?'':s2B}">
+    </div>` : '';
+    const mtb = isDecider ? `<div class="final-set-row">
+      <span class="set-label">Match TB</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-mbA" data-match="${id}" data-side="mbA"
+        value="${mbA==null?'':mbA}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-mbB" data-match="${id}" data-side="mbB"
+        value="${mbB==null?'':mbB}">
+    </div>` : '';
+    return `<div class="final-score-section">${set1}${set2}${mtb}</div>`;
+  }
+
+  if(!s1W) return '';
+  const parts = [`${s1A}–${s1B}`];
+  if(s2W) parts.push(`${s2A}–${s2B}`);
+  if(isDecider && mbA != null && mbB != null) parts.push(`[${mbA}–${mbB}]`);
+  return `<div class="final-score-section"><span class="final-score-pub">${parts.join(', ')}</span></div>`;
+}
+
+// ============================================================
 // RENDER
-// ---------------------------------------------------------------------
+// ============================================================
 function matchCard(id){
   const m = matches[id];
   const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
   const bothReady = aSlot.ready && bSlot.ready;
   const winner = bothReady ? getWinner(m) : null;
-  const tie = bothReady && m.scoreA!=null && m.scoreB!=null && m.scoreA===m.scoreB;
   const isFinal = m.round === 'FINAL';
+  const isSF    = m.round === 'SF';
+  const tagText = isFinal ? '🏆 GRAND FINAL' : id;
 
-  function rowHTML(slot, side, score){
-    const cls = [];
-    if(!bothReady) cls.push('pending');
-    else if(winner === slot.teamId) cls.push('winner');
-    else if(winner) cls.push('loser');
-    const scoreInput = bothReady
-      ? `<input class="score-box" type="number" min="0" step="1" inputmode="numeric"
-           id="score-${id}-${side}" data-match="${id}" data-side="${side}"
-           value="${score==null?'':score}">`
-      : '';
-    const trophy = (winner && winner===slot.teamId) ? `<span class="trophy">🏆</span>` : '';
-    return `<div class="slot-row ${cls.join(' ')}" id="slot-${id}-${side}">
-        <span class="slot-name">${slot.label}${trophy}</span>${scoreInput}
-      </div>`;
+  function slotRow(slot, side){
+    const scoreVal = m['score' + side];
+    const cls = !bothReady ? 'pending'
+      : slot.teamId === winner ? 'winner'
+      : winner ? 'loser' : '';
+    const trophy = winner === slot.teamId ? `<span class="trophy">🏆</span>` : '';
+
+    let scoreEl = '';
+    if(bothReady && !isFinal){
+      if(IS_ADMIN){
+        const maxVal = isSF ? 7 : 4;
+        scoreEl = `<input class="score-box" type="number" min="0" max="${maxVal}" inputmode="numeric"
+          id="score-${id}-${side}" data-match="${id}" data-side="${side}"
+          value="${scoreVal==null?'':scoreVal}">`;
+      } else if(scoreVal != null){
+        scoreEl = `<span class="score-display">${scoreVal}</span>`;
+      }
+    }
+
+    return `<div class="slot-row ${cls}" id="slot-${id}-${side}">
+      <span class="slot-name">${slot.label}${trophy}</span>
+      ${scoreEl}
+    </div>`;
   }
 
-  const tagText = isFinal ? '🏆 GRAND FINAL' : id;
-  const tieWarn = tie ? `<div class="tie-warn">Scores can't be tied — please correct.</div>` : '';
+  let tbRow = '';
+  if(bothReady && !isFinal){
+    const tieAt = isSF ? 6 : 2;
+    if(m.scoreA === tieAt && m.scoreB === tieAt) tbRow = buildTbRow(id, m, isSF);
+  }
+
+  const finalSection = (isFinal && bothReady) ? buildFinalSection(id, m) : '';
+
+  let tieWarn = '';
+  if(IS_ADMIN && bothReady && !isFinal && m.scoreA != null && m.scoreB != null){
+    const tieAt = isSF ? 6 : 2;
+    if(m.scoreA === m.scoreB && m.scoreA !== tieAt){
+      tieWarn = `<div class="tie-warn">Scores can't be equal here — please correct.</div>`;
+    }
+  }
 
   let champion = '';
   if(isFinal && winner){
@@ -395,12 +601,14 @@ function matchCard(id){
   }
 
   return `<div class="match-card ${isFinal?'final-card':''} ${winner?'complete':''}" id="card-${id}">
-      <div class="tag"><span>${tagText}</span><span class="tag-time">${m.when}</span></div>
-      ${rowHTML(aSlot,'A', m.scoreA)}
-      ${rowHTML(bSlot,'B', m.scoreB)}
-      ${tieWarn}
-    </div>
-    ${champion}`;
+    <div class="tag"><span>${tagText}</span><span class="tag-time">${m.when}</span></div>
+    ${slotRow(aSlot,'A')}
+    ${slotRow(bSlot,'B')}
+    ${tbRow}
+    ${finalSection}
+    ${tieWarn}
+  </div>
+  ${champion}`;
 }
 
 function rankingColumnHTML(){
@@ -411,10 +619,10 @@ function rankingColumnHTML(){
       <div class="match-card"><div class="pending-note">Waiting on Round of 12 — ${done}/6 matches complete.</div></div>`;
   }
   const bands = [
-    {max:2, cls:'rank-bye', label:'bye \u2192 SF'},
-    {max:4, cls:'rank-qf',  label:'\u2192 QF'},
-    {max:8, cls:'rank-rep', label:'\u2192 Repechage'},
-    {max:12,cls:'rank-out', label:'eliminated'},
+    {max:2,  cls:'rank-bye', label:'bye → SF'},
+    {max:4,  cls:'rank-qf',  label:'→ QF'},
+    {max:8,  cls:'rank-rep', label:'→ Repechage'},
+    {max:12, cls:'rank-out', label:'eliminated'},
   ];
   function bandFor(n){ return bands.find(b=>n<=b.max); }
 
@@ -422,18 +630,18 @@ function rankingColumnHTML(){
   RO12_ORDER.forEach(id=>{
     const m = matches[id];
     const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
-    gamesByTeam[aSlot.teamId] = m.scoreA;
-    gamesByTeam[bSlot.teamId] = m.scoreB;
+    if(aSlot.teamId) gamesByTeam[aSlot.teamId] = m.scoreA;
+    if(bSlot.teamId) gamesByTeam[bSlot.teamId] = m.scoreB;
   });
 
   const rows = ranking.map((tid,i)=>{
     const n = i+1;
     const b = bandFor(n);
     return `<div class="rank-row ${b.cls}" id="rank-row-${n}">
-        <span class="n">#${n}</span>
-        <span>${teamName(tid)}</span>
-        <span class="g">${gamesByTeam[tid]}g \u00b7 ${b.label}</span>
-      </div>`;
+      <span class="n">#${n}</span>
+      <span>${teamName(tid)}</span>
+      <span class="g">${gamesByTeam[tid]}g · ${b.label}</span>
+    </div>`;
   }).join('');
 
   return `<div class="col-head">Rankings</div>
@@ -448,28 +656,29 @@ function render(){
   ranking = computeRanking();
 
   const col = (title, sub, bodyHTML) => `<div class="col">
-      <div class="col-head">${title}</div>
-      ${sub?`<div class="col-sub">${sub}</div>`:''}
-      ${bodyHTML}
-    </div>`;
+    <div class="col-head">${title}</div>
+    ${sub?`<div class="col-sub">${sub}</div>`:''}
+    ${bodyHTML}
+  </div>`;
 
   const colsHTML = [
-    col('Round of 24', 'Fast4 \u00b7 12 matches', ['R1-1','R1-2','R1-3','R1-4','R1-5','R1-6','R1-7','R1-8','R1-9','R1-10','R1-11','R1-12'].map(matchCard).join('')),
-    col('Round of 12', 'Fast4', RO12_ORDER.map(matchCard).join('')),
+    col('Round of 24','Fast4 · 12 matches',
+      ['R1-1','R1-2','R1-3','R1-4','R1-5','R1-6','R1-7','R1-8','R1-9','R1-10','R1-11','R1-12'].map(matchCard).join('')),
+    col('Round of 12','Fast4', RO12_ORDER.map(matchCard).join('')),
     `<div class="col" style="width:230px;">${rankingColumnHTML()}</div>`,
-    col('Repechage', 'Fast4', ['REP1','REP2'].map(matchCard).join('')),
-    col('Quarterfinal', 'Fast4', ['QF1','QF2'].map(matchCard).join('')),
-    col('Semifinal', 'Best of 1 set', ['SF1','SF2'].map(matchCard).join('')),
-    col('Grand Final', 'Best of 2 sets', matchCard('FINAL')),
+    col('Repechage','Fast4', ['REP1','REP2'].map(matchCard).join('')),
+    col('Quarterfinal','Fast4', ['QF1','QF2'].map(matchCard).join('')),
+    col('Semifinal','Best of 1 set', ['SF1','SF2'].map(matchCard).join('')),
+    col('Grand Final','Best of 2 sets', matchCard('FINAL')),
   ].join('');
 
   document.getElementById('columns').innerHTML = colsHTML;
   requestAnimationFrame(drawConnectors);
 }
 
-// ---------------------------------------------------------------------
+// ============================================================
 // CONNECTORS
-// ---------------------------------------------------------------------
+// ============================================================
 function drawConnectors(){
   const svg = document.getElementById('connSvg');
   const inner = document.getElementById('bracketInner');
@@ -484,14 +693,14 @@ function drawConnectors(){
   let paths = '';
   CONNECTORS.forEach(([fromId,toId])=>{
     const fromEl = document.getElementById(fromId);
-    const toEl = document.getElementById(toId);
+    const toEl   = document.getElementById(toId);
     if(!fromEl || !toEl) return;
     const fr = fromEl.getBoundingClientRect();
     const tr = toEl.getBoundingClientRect();
-    const x1 = fr.right - wrapRect.left;
-    const y1 = fr.top - wrapRect.top + fr.height/2;
-    const x2 = tr.left - wrapRect.left;
-    const y2 = tr.top - wrapRect.top + tr.height/2;
+    const x1 = fr.right  - wrapRect.left;
+    const y1 = fr.top    - wrapRect.top + fr.height/2;
+    const x2 = tr.left   - wrapRect.left;
+    const y2 = tr.top    - wrapRect.top + tr.height/2;
     const midX = x1 + (x2-x1)/2;
     const done = fromEl.classList.contains('complete') || fromEl.classList.contains('rank-row');
     paths += `<path class="conn-line ${done?'done':''}" d="M ${x1} ${y1} H ${midX} V ${y2} H ${x2}"/>`;
@@ -499,28 +708,66 @@ function drawConnectors(){
   svg.innerHTML = paths;
 }
 
-// ---------------------------------------------------------------------
-// EVENTS
-// ---------------------------------------------------------------------
-document.getElementById('columns').addEventListener('input', (e)=>{
-  const t = e.target;
-  if(!t.classList.contains('score-box')) return;
-  const matchId = t.dataset.match, side = t.dataset.side;
-  const val = t.value === '' ? null : Math.max(0, parseInt(t.value,10));
+// ============================================================
+// FIREBASE SYNC
+// ============================================================
+const saveTimers = {};
 
-  const activeId = t.id;
-  const selStart = t.selectionStart;
+function saveToFirebase(matchId){
+  if(!IS_ADMIN) return;
+  clearTimeout(saveTimers[matchId]);
+  saveTimers[matchId] = setTimeout(()=>{
+    const m = matches[matchId];
+    const data = m.round === 'FINAL'
+      ? {s1A:m.s1A, s1B:m.s1B, s2A:m.s2A, s2B:m.s2B, mbA:m.mbA, mbB:m.mbB}
+      : {scoreA:m.scoreA, scoreB:m.scoreB, tbA:m.tbA, tbB:m.tbB};
+    db.collection('scores').doc(matchId).set(data);
+  }, 400);
+}
 
-  matches[matchId]['score'+side] = (val==null || isNaN(val)) ? null : val;
+db.collection('scores').onSnapshot(snapshot=>{
+  snapshot.forEach(docSnap=>{
+    const id = docSnap.id;
+    if(!matches[id]) return;
+    Object.assign(matches[id], docSnap.data());
+  });
   render();
+});
 
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+document.getElementById('columns').addEventListener('input', e=>{
+  const t = e.target;
+  if(!t.classList.contains('score-box') || !IS_ADMIN) return;
+
+  const matchId = t.dataset.match;
+  const side    = t.dataset.side;
+  const val     = t.value === '' ? null : Math.max(0, parseInt(t.value,10));
+  matches[matchId][side] = (val == null || isNaN(val)) ? null : val;
+
+  saveToFirebase(matchId);
+
+  const activeId = t.id, selStart = t.selectionStart;
+  render();
   const restore = document.getElementById(activeId);
-  if(restore){ restore.focus(); try{ restore.setSelectionRange(selStart, selStart); }catch(e){} }
+  if(restore){ restore.focus(); try{ restore.setSelectionRange(selStart,selStart); }catch(e){} }
 });
 
 document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(!confirm('Clear every score and reset the whole bracket?')) return;
-  Object.values(matches).forEach(m=>{ m.scoreA=null; m.scoreB=null; });
+  if(!IS_ADMIN || !confirm('Clear every score and reset the whole bracket?')) return;
+  const batch = db.batch();
+  Object.keys(matches).forEach(id=>{
+    const m = matches[id];
+    if(m.round === 'FINAL'){
+      m.s1A=m.s1B=m.s2A=m.s2B=m.mbA=m.mbB=null;
+      batch.set(db.collection('scores').doc(id),{s1A:null,s1B:null,s2A:null,s2B:null,mbA:null,mbB:null});
+    } else {
+      m.scoreA=m.scoreB=m.tbA=m.tbB=null;
+      batch.set(db.collection('scores').doc(id),{scoreA:null,scoreB:null,tbA:null,tbB:null});
+    }
+  });
+  batch.commit();
   render();
 });
 
