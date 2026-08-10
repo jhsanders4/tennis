@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Dionysos Open — Live Bracket</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --turf:#3E7A46;
+    --turf-deep:#1E3F26;
+    --turf-light:#DCEBD3;
+    --clay:#C1552E;
+    --clay-deep:#8F3B1E;
+    --clay-mid:#E08A57;
+    --clay-light:#F0C6A8;
+    --clay-soft:#F3E4D3;
+    --cream:#F7F2E7;
+    --card:#FFFDF8;
+    --ink:#221C15;
+    --muted:#9C9686;
+    --error:#A6302B;
+    --line:#DCD3BF;
+    --font-display:'Fraunces', Georgia, serif;
+    --font-body:'Inter', -apple-system, sans-serif;
+    --font-mono:'Space Mono', 'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:var(--font-body);}
+  body{padding-bottom:60px;}
+
+  /* ---------- ADMIN BANNER ---------- */
+  .admin-banner{
+    background:var(--turf-deep);color:var(--turf-light);
+    font-family:var(--font-mono);font-size:12px;text-align:center;
+    padding:8px 16px;letter-spacing:0.1em;text-transform:uppercase;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:
+      radial-gradient(circle at 15% 20%, rgba(62,122,70,0.20), transparent 45%),
+      linear-gradient(160deg, var(--clay-deep) 0%, #6E2C15 100%);
+    color:var(--cream);
+    padding:44px 28px 34px;
+    position:relative;
+    overflow:hidden;
+    border-bottom:4px solid var(--turf);
+  }
+  .hero::after{
+    content:"";
+    position:absolute; right:-60px; top:-60px; width:260px; height:260px;
+    border:2px dashed rgba(246,241,228,0.14); border-radius:50%;
+  }
+  .hero-eyebrow{
+    font-family:var(--font-mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:12px; color:var(--turf-light); margin-bottom:10px;
+  }
+  .hero h1{
+    font-family:var(--font-display); font-weight:700; font-size:clamp(28px,4.4vw,46px);
+    margin:0 0 8px; letter-spacing:-0.01em;
+  }
+  .hero p.sub{ margin:0 0 20px; font-size:15px; color:var(--clay-light); max-width:640px; line-height:1.5;}
+  .hero-meta{display:flex; flex-wrap:wrap; gap:10px;}
+  .pill{
+    font-family:var(--font-mono); font-size:12px; padding:6px 12px; border-radius:100px;
+    border:1px solid rgba(246,241,228,0.30); color:var(--cream); background:rgba(246,241,228,0.08);
+  }
+  .hero-actions{ margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{
+    font-family:var(--font-body); font-weight:600; font-size:13px; cursor:pointer;
+    padding:10px 16px; border-radius:8px; border:1px solid transparent; transition:transform .12s ease, background .15s ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--turf); color:var(--cream); }
+  .btn-primary:hover{ background:#2F5F37; }
+  .btn-ghost{ background:transparent; color:var(--cream); border-color:rgba(246,241,228,0.38); }
+  .btn-ghost:hover{ background:rgba(246,241,228,0.10); }
+
+  /* ---------- INFO PANEL ---------- */
+  details.info{ margin:18px 28px 0; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  details.info summary{
+    list-style:none; cursor:pointer; padding:14px 18px; font-weight:600; font-size:14px;
+    display:flex; align-items:center; justify-content:space-between; color:var(--turf-deep);
+  }
+  details.info summary::-webkit-details-marker{display:none;}
+  details.info summary::after{ content:"+"; font-family:var(--font-mono); font-size:18px; color:var(--clay);}
+  details.info[open] summary::after{ content:"–"; }
+  .info-body{ padding:0 18px 18px; font-size:13.5px; line-height:1.65; color:#4B4B44; display:grid; gap:16px; grid-template-columns:1fr 1fr;}
+  @media (max-width:760px){ .info-body{grid-template-columns:1fr;} }
+  .info-body h4{ margin:0 0 6px; font-family:var(--font-mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--clay-deep); }
+  .info-body ul{ margin:0; padding-left:18px; }
+  .info-body li{ margin-bottom:4px; }
+  .sched-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .sched-table td{ padding:6px; border-bottom:1px solid var(--line); vertical-align:top;}
+  .sched-table td:first-child{ font-weight:600; white-space:nowrap; color:var(--turf-deep);}
+  .sched-table .times{ font-family:var(--font-mono); font-size:11.5px; color:#4B4B44; }
+  .sun-note{ font-size:11.5px; color:var(--clay-deep); margin-top:8px; font-style:italic; }
+
+  /* ---------- BRACKET ---------- */
+  .bracket-wrap{ overflow-x:auto; padding:30px 0 10px; margin-top:6px; }
+  .bracket-inner{ position:relative; display:inline-block; min-width:100%; padding:0 28px; }
+  #connSvg{ position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
+  .columns{ display:flex; gap:54px; position:relative; z-index:1; align-items:flex-start; }
+  .col{ display:flex; flex-direction:column; gap:22px; width:250px; flex:0 0 auto; }
+  .col-head{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--cream); background:var(--turf); display:inline-block; padding:5px 10px; border-radius:5px;
+    margin-bottom:2px; font-weight:700;
+  }
+  .col-sub{ font-size:11.5px; color:var(--muted); line-height:1.4; margin:-14px 0 4px; }
+
+  .match-card{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    box-shadow:0 1px 2px rgba(28,35,31,0.05);
+    overflow:hidden; transition:box-shadow .2s ease, border-color .2s ease;
+  }
+  .match-card.complete{ border-color:var(--clay); box-shadow:0 2px 10px rgba(193,85,46,0.20); }
+  .match-card .tag{
+    font-family:var(--font-mono); font-size:10px; letter-spacing:.04em; color:var(--turf-deep);
+    background:#EFEADA; padding:4px 10px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+  }
+  .tag-time{ color:var(--muted); font-weight:400; white-space:nowrap; }
+  .slot-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 10px; gap:8px; }
+  .slot-row + .slot-row{ border-top:1px dashed var(--line); }
+  .slot-name{ font-size:13px; line-height:1.25; color:var(--ink); }
+  .slot-row.pending .slot-name{ color:var(--muted); font-style:italic; font-size:12px; }
+  .slot-row.winner .slot-name{ font-weight:700; color:var(--clay-deep); }
+  .slot-row.loser .slot-name{ color:var(--muted); text-decoration:line-through; text-decoration-color:var(--line); }
+  .score-box{
+    width:38px; height:30px; text-align:center; font-family:var(--font-mono); font-weight:700; font-size:14px;
+    background:var(--turf-deep); color:var(--clay-light); border:1px solid #14301B; border-radius:5px; flex:0 0 auto;
+  }
+  .score-box:focus{ outline:2px solid var(--clay); outline-offset:1px; }
+  .score-box::-webkit-outer-spin-button, .score-box::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .trophy{ font-size:13px; margin-left:6px; }
+  .tie-warn{ font-size:11px; color:var(--error); padding:0 10px 8px; margin-top:-4px; }
+  .pending-note{ font-size:11.5px; color:var(--muted); padding:10px; font-style:italic; text-align:center; }
+
+  /* Public read-only score chip */
+  .score-display{
+    width:38px; height:30px; display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:700; font-size:14px;
+    background:var(--turf-deep); color:var(--clay-light); border-radius:5px; flex:0 0 auto;
+  }
+
+  /* Tiebreak row */
+  .tb-row{
+    display:flex; align-items:center; gap:8px; padding:6px 10px;
+    background:rgba(193,85,46,0.06); border-top:1px dashed var(--line);
+  }
+  .tb-label{
+    font-family:var(--font-mono); font-size:10.5px; color:var(--clay-deep);
+    text-transform:uppercase; letter-spacing:0.07em; flex:1;
+  }
+  .tb-sep, .set-sep{
+    font-family:var(--font-mono); font-weight:700; color:var(--muted); padding:0 2px;
+  }
+  .tb-score{
+    font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--clay-deep);
+  }
+  .tb-box{ width:34px !important; }
+
+  /* Final score section */
+  .final-score-section{
+    padding:6px 10px 8px; border-top:1px dashed var(--line);
+    background:rgba(193,85,46,0.04); display:flex; flex-direction:column; gap:4px;
+  }
+  .final-set-row{ display:flex; align-items:center; gap:6px; padding:2px 0; }
+  .set-label{
+    font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase;
+    letter-spacing:0.07em; color:var(--clay-deep); width:72px; flex:0 0 auto;
+  }
+  .final-score-pub{
+    font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--clay-deep); padding:4px 0;
+  }
+
+  /* Ranking column */
+  .rank-row{ display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:7px; font-size:12.5px; }
+  .rank-row .n{ font-family:var(--font-mono); font-weight:700; width:20px; }
+  .rank-row .g{ margin-left:auto; font-family:var(--font-mono); font-size:11px; color:#6b6558; }
+  .rank-bye{ background:var(--clay-light); }
+  .rank-qf{ background:var(--turf-light); }
+  .rank-rep{ background:var(--clay-soft); }
+  .rank-out{ background:#EFEDE4; color:var(--muted); }
+  .rank-legend{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:2px; }
+  .rank-legend span{ font-size:10px; font-family:var(--font-mono); padding:3px 7px; border-radius:5px; }
+
+  .final-card{ border:2px solid var(--clay-deep); }
+  .final-card .tag{ background:var(--clay-deep); color:var(--cream); font-weight:700; }
+  .final-card .tag .tag-time{ color:var(--clay-light); }
+  .champion-banner{
+    margin-top:4px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:15px;
+    color:var(--turf-deep); background:linear-gradient(100deg, var(--clay-light), #FBEFD9, var(--clay-light));
+    background-size:200% 100%; animation:shimmer 3.5s linear infinite; padding:12px 10px; border-radius:8px;
+    line-height:1.4;
+  }
+  @media (prefers-reduced-motion: reduce){ .champion-banner{ animation:none; } }
+  @keyframes shimmer{ 0%{background-position:0% 0;} 100%{background-position:200% 0;} }
+
+  .conn-line{ fill:none; stroke:var(--line); stroke-width:1.5; opacity:0.45; }
+  .conn-line.done{ stroke:var(--clay); stroke-width:2; opacity:0.8; }
+
+  @media (max-width:900px){
+    #connSvg{ display:none; }
+    .bracket-wrap{ overflow-x:visible; padding:20px 16px; }
+    .columns{ flex-direction:column; gap:30px; }
+    .col{ width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="adminBanner" style="display:none" class="admin-banner">⚙ Admin Mode — scores are live</div>
+
+<div class="hero">
+  <div class="hero-eyebrow">Jordan &amp; Lydia · Wedding Week · Tennis Tournament · 24 Teams</div>
+  <h1>The Dionysos Open</h1>
+  <p class="sub">Round of 24 → Round of 12 → Repechage → Quarterfinal → Semifinal → Grand Final.</p>
+  <div class="hero-meta">
+    <span class="pill">🏆 Grand Final — Fri 4 Sep, Late Afternoon</span>
+    <span class="pill">Fast4 through the Quarterfinal</span>
+    <span class="pill">Best of 1 set (SF) · Best of 2 sets (Final)</span>
+  </div>
+  <div class="hero-actions">
+    <button class="btn btn-primary" id="scrollFinalBtn">Jump to Grand Final →</button>
+    <button class="btn btn-ghost" id="resetBtn" style="display:none">Reset all scores</button>
+  </div>
+</div>
+
+<details class="info">
+  <summary>Format, repechage rules &amp; day-by-day schedule</summary>
+  <div class="info-body">
+    <div>
+      <h4>Format &amp; scoring</h4>
+      <ul>
+        <li><strong>Round of 24, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — 4 games, one serve each, no-ad. At 2–2 a 7-point tiebreak decides the match.</li>
+        <li><strong>Semifinal:</strong> best of 1 set, no-ad, tiebreak at 6–6.</li>
+        <li><strong>Grand Final:</strong> best of 2 sets — match tiebreak decider if 1–1.</li>
+      </ul>
+      <h4 style="margin-top:14px;">How the repechage works</h4>
+      <ul>
+        <li>After all 6 Round of 12 matches finish, every team (6 winners + 6 losers) is ranked by games won.</li>
+        <li>Ranks 1 &amp; 2 get a bye straight to the Semifinal.</li>
+        <li>Ranks 3 &amp; 4 go to the Quarterfinal.</li>
+        <li>Ranks 5–8 (2 winners + 2 best-placed losers) play the Repechage for the last 2 Quarterfinal spots.</li>
+        <li>Ranks 9–12 are eliminated.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Day-by-day court time (indicative)</h4>
+      <table class="sched-table">
+        <tr><td>Tue 1 Sep</td><td class="times">Afternoon — R1-1, R1-2</td></tr>
+        <tr><td>Wed 2 Sep</td><td class="times">Morning — R1-3, R1-4 · Afternoon — R1-5, R1-6, R1-7, R1-8</td></tr>
+        <tr><td>Thu 3 Sep</td><td class="times">Morning — R24-9, R24-10 (no further court time this day)</td></tr>
+        <tr><td>Fri 4 Sep</td><td class="times">Morning — R24-11, R24-12, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
+      </table>
+      <div class="sun-note">Times above are a rough guide — teams will confirm exact slots closer to the day. The court has no lights, so everything needs to wrap up before sundown, roughly 7:30pm in Kumlubük in early September.</div>
+    </div>
+  </div>
+</details>
+
+<div class="bracket-wrap">
+  <div class="bracket-inner" id="bracketInner">
+    <svg id="connSvg"></svg>
+    <div class="columns" id="columns"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// FIREBASE
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyAaIwUMqg2O13OIOEfIHR9TfXimUiGCYkQ",
+  authDomain: "dionysos-open.firebaseapp.com",
+  projectId: "dionysos-open",
+  storageBucket: "dionysos-open.firebasestorage.app",
+  messagingSenderId: "210643719567",
+  appId: "1:210643719567:web:6fda373fc1ca8ff561e7fa"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ============================================================
+// ADMIN MODE
+// ============================================================
+const ADMIN_PASSWORD = 'tennis2026';
+
+const IS_ADMIN = (()=>{
+  if(!new URLSearchParams(location.search).has('admin')) return false;
+  if(sessionStorage.getItem('adminAuth') === '1') return true;
+  const pw = prompt('Admin password:');
+  if(pw === ADMIN_PASSWORD){ sessionStorage.setItem('adminAuth','1'); return true; }
+  alert('Wrong password.');
+  history.replaceState(null,'',location.pathname);
+  return false;
+})();
+
+if(IS_ADMIN){
+  document.getElementById('adminBanner').style.display = 'block';
+  document.getElementById('resetBtn').style.display = '';
+}
+
+// ============================================================
+// DATA
+// ============================================================
+const TEAMS = {
+  P1:  "Bo O'Brien & Sarah Simpson",
+  P2:  "James Carlile & Lydia Turman",
+  P3:  "James McKeon & Alexis Heim",
+  P4:  "Ian Little & Annemarie Muir",
+  P5:  "Jordan Sanders & Josie Di Giovanni",
+  P6:  "Blake Sanders & Dee Murray",
+  P7:  "Ross Michelle & Lucy McFarlane",
+  P8:  "Phil Wylie & Kelli Ng",
+  P9:  "Chris Barratt & Lauren Gathercole",
+  P10: "Scott Elliss & Georgia Welsh",
+  P11: "Darcy Bateman & Barbara Cassani",
+  P12: "Jack Whiting & Matilda Leishman",
+  P13: "Thomas Liew & Erin Depledge",
+  P14: "Jeremy Fry & Dan Horne",
+  P15: "Nathan Scarfo & James Storey",
+  P16: "Tom Crump & Michael Venosta",
+  P17: "Jack Leishman & Nick Crawford",
+  P18: "Dave Franks & Courtney Dettrich",
+  P19: "Peter Littleyuile & Jane Hale",
+  P20: "Guy Davis & Heidi Begala",
+  P21: "Sam Mugford & Maddie Begala",
+  P22: "Lance Canavan & Libby Littleyuile",
+  P23: "Marius Lammers & Jack Howard",
+  P24: "Anthony Stewart & Declan Sayce",
+};
+
+function team(id){ return {type:'team', id}; }
+function winnerOf(of){ return {type:'winner', of}; }
+function rank(n){ return {type:'rank', n}; }
+
+const matches = {
+  'R24-1':  {round:'R24',   a:team('P9'),        b:team('P12'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R24-2':  {round:'R24',   a:team('P22'),       b:team('P14'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R24-3':  {round:'R24',   a:team('P2'),        b:team('P4'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R24-4':  {round:'R24',   a:team('P6'),        b:team('P17'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R24-5':  {round:'R24',   a:team('P1'),        b:team('P5'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-6':  {round:'R24',   a:team('P7'),        b:team('P8'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-7':  {round:'R24',   a:team('P13'),       b:team('P15'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-8':  {round:'R24',   a:team('P16'),       b:team('P21'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-9':  {round:'R24',   a:team('P18'),       b:team('P19'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R24-10': {round:'R24',   a:team('P3'),        b:team('P10'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R24-11': {round:'R24',   a:team('P23'),       b:team('P24'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'R24-12': {round:'R24',   a:team('P11'),       b:team('P20'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+
+  'RO12-A':{round:'RO12',  a:winnerOf('R24-1'), b:winnerOf('R24-2'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-B':{round:'RO12',  a:winnerOf('R24-3'), b:winnerOf('R24-4'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-C':{round:'RO12',  a:winnerOf('R24-5'), b:winnerOf('R24-6'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-D':{round:'RO12',  a:winnerOf('R24-7'), b:winnerOf('R24-8'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-E':{round:'RO12',  a:winnerOf('R24-9'), b:winnerOf('R24-10'),scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-F':{round:'RO12',  a:winnerOf('R24-11'),b:winnerOf('R24-12'),scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+
+  'REP1':  {round:'REP',   a:rank(5),           b:rank(8),           scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'REP2':  {round:'REP',   a:rank(6),           b:rank(7),           scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+
+  'QF1':   {round:'QF',    a:rank(3),           b:winnerOf('REP1'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'QF2':   {round:'QF',    a:rank(4),           b:winnerOf('REP2'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+
+  'SF1':   {round:'SF',    a:rank(1),           b:winnerOf('QF1'),   scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'SF2':   {round:'SF',    a:rank(2),           b:winnerOf('QF2'),   scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+
+  'FINAL': {round:'FINAL', a:winnerOf('SF1'),   b:winnerOf('SF2'),
+            s1A:null,s1B:null,s2A:null,s2B:null,mbA:null,mbB:null,   when:'Fri 4 Sep · Late Afternoon'},
+};
+
+const RO12_ORDER = ['RO12-A','RO12-B','RO12-C','RO12-D','RO12-E','RO12-F'];
+
+const CONNECTORS = [
+  ['card-R24-1', 'slot-RO12-A-A'], ['card-R24-2', 'slot-RO12-A-B'],
+  ['card-R24-3', 'slot-RO12-B-A'], ['card-R24-4', 'slot-RO12-B-B'],
+  ['card-R24-5', 'slot-RO12-C-A'], ['card-R24-6', 'slot-RO12-C-B'],
+  ['card-R24-7', 'slot-RO12-D-A'], ['card-R24-8', 'slot-RO12-D-B'],
+  ['card-R24-9', 'slot-RO12-E-A'], ['card-R24-10','slot-RO12-E-B'],
+  ['card-R24-11','slot-RO12-F-A'], ['card-R24-12','slot-RO12-F-B'],
+  ['card-REP1',  'slot-QF1-B'],    ['card-REP2',  'slot-QF2-B'],
+  ['card-QF1',   'slot-SF1-B'],    ['card-QF2',   'slot-SF2-B'],
+  ['card-SF1',   'slot-FINAL-A'],  ['card-SF2',   'slot-FINAL-B'],
+];
+
+// ============================================================
+// RESOLUTION ENGINE
+// ============================================================
+let ranking = null;
+
+function teamName(id){ return id ? TEAMS[id] : ''; }
+
+function resolveSlot(slot){
+  if(slot.type === 'team'){
+    return {teamId:slot.id, label:teamName(slot.id), ready:true};
+  }
+  if(slot.type === 'winner'){
+    const m = matches[slot.of];
+    const w = getWinner(m);
+    if(w) return {teamId:w, label:teamName(w), ready:true};
+    return {teamId:null, label:`Winner — ${slot.of}`, ready:false};
+  }
+  if(slot.type === 'rank'){
+    if(!ranking) return {teamId:null, label:`Seed: Rank ${slot.n}`, ready:false};
+    const teamId = ranking[slot.n-1] || null;
+    if(!teamId) return {teamId:null, label:`Seed: Rank ${slot.n}`, ready:false};
+    return {teamId, label:teamName(teamId), ready:true};
+  }
+}
+
+function setWinnerSide(gA, gB){
+  if(gA == null || gB == null || gA === gB) return null;
+  return gA > gB ? 'A' : 'B';
+}
+
+function getWinner(m){
+  const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+  if(!aSlot.ready || !bSlot.ready) return null;
+  const aId = aSlot.teamId, bId = bSlot.teamId;
+
+  if(m.round === 'FINAL'){
+    const s1W = setWinnerSide(m.s1A, m.s1B);
+    const s2W = setWinnerSide(m.s2A, m.s2B);
+    if(!s1W || !s2W) return null;
+    if(s1W === s2W) return s1W === 'A' ? aId : bId;
+    if(m.mbA == null || m.mbB == null || m.mbA === m.mbB) return null;
+    return m.mbA > m.mbB ? aId : bId;
+  }
+
+  // Fast4 (R1, RO12, REP, QF) or SF
+  const tieAt = m.round === 'SF' ? 6 : 2;
+  const {scoreA, scoreB, tbA, tbB} = m;
+  if(scoreA == null || scoreB == null) return null;
+  if(scoreA === scoreB){
+    if(scoreA === tieAt){
+      if(tbA == null || tbB == null || tbA === tbB) return null;
+      return tbA > tbB ? aId : bId;
+    }
+    return null;
+  }
+  return scoreA > scoreB ? aId : bId;
+}
+
+function computeRanking(){
+  const entries = [];
+  for(let i=0;i<RO12_ORDER.length;i++){
+    const id = RO12_ORDER[i];
+    const m = matches[id];
+    const w = getWinner(m);
+    if(!w) return null;
+    const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+    const aIsWinner = (w === aSlot.teamId);
+    const winnerGames = aIsWinner ? m.scoreA : m.scoreB;
+    const loserGames  = aIsWinner ? m.scoreB : m.scoreA;
+    const loserId = aIsWinner ? bSlot.teamId : aSlot.teamId;
+    entries.push({teamId:w,       games:winnerGames, isWinner:true,  idx:i});
+    entries.push({teamId:loserId, games:loserGames,  isWinner:false, idx:i});
+  }
+  entries.sort((x,y)=> y.games-x.games || (x.isWinner===y.isWinner?0:(x.isWinner?-1:1)) || x.idx-y.idx);
+  return entries.map(e=>e.teamId);
+}
+
+// ============================================================
+// SCORE SECTION BUILDERS
+// ============================================================
+function buildTbRow(id, m, isSF){
+  const label = isSF ? 'Set tiebreak' : 'Tiebreak';
+  if(IS_ADMIN){
+    return `<div class="tb-row">
+      <span class="tb-label">${label}</span>
+      <input class="score-box tb-box" type="number" min="0" max="7" inputmode="numeric"
+        id="score-${id}-tbA" data-match="${id}" data-side="tbA"
+        value="${m.tbA==null?'':m.tbA}">
+      <span class="tb-sep">–</span>
+      <input class="score-box tb-box" type="number" min="0" max="7" inputmode="numeric"
+        id="score-${id}-tbB" data-match="${id}" data-side="tbB"
+        value="${m.tbB==null?'':m.tbB}">
+    </div>`;
+  }
+  if(m.tbA != null && m.tbB != null){
+    return `<div class="tb-row">
+      <span class="tb-label">${label}</span>
+      <span class="tb-score">${m.tbA}–${m.tbB}</span>
+    </div>`;
+  }
+  return '';
+}
+
+function buildFinalSection(id, m){
+  const {s1A,s1B,s2A,s2B,mbA,mbB} = m;
+  const s1W = setWinnerSide(s1A, s1B);
+  const s2W = setWinnerSide(s2A, s2B);
+  const isDecider = s1W && s2W && s1W !== s2W;
+
+  if(IS_ADMIN){
+    const set1 = `<div class="final-set-row">
+      <span class="set-label">Set 1</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s1A" data-match="${id}" data-side="s1A"
+        value="${s1A==null?'':s1A}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s1B" data-match="${id}" data-side="s1B"
+        value="${s1B==null?'':s1B}">
+    </div>`;
+    const set2 = s1W ? `<div class="final-set-row">
+      <span class="set-label">Set 2</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s2A" data-match="${id}" data-side="s2A"
+        value="${s2A==null?'':s2A}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s2B" data-match="${id}" data-side="s2B"
+        value="${s2B==null?'':s2B}">
+    </div>` : '';
+    const mtb = isDecider ? `<div class="final-set-row">
+      <span class="set-label">Match TB</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-mbA" data-match="${id}" data-side="mbA"
+        value="${mbA==null?'':mbA}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-mbB" data-match="${id}" data-side="mbB"
+        value="${mbB==null?'':mbB}">
+    </div>` : '';
+    return `<div class="final-score-section">${set1}${set2}${mtb}</div>`;
+  }
+
+  if(!s1W) return '';
+  const parts = [`${s1A}–${s1B}`];
+  if(s2W) parts.push(`${s2A}–${s2B}`);
+  if(isDecider && mbA != null && mbB != null) parts.push(`[${mbA}–${mbB}]`);
+  return `<div class="final-score-section"><span class="final-score-pub">${parts.join(', ')}</span></div>`;
+}
+
+// ============================================================
+// RENDER
+// ============================================================
+function matchCard(id){
+  const m = matches[id];
+  const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+  const bothReady = aSlot.ready && bSlot.ready;
+  const winner = bothReady ? getWinner(m) : null;
+  const isFinal  = m.round === 'FINAL';
+  const isSF     = m.round === 'SF';
+  const isFast4  = !isFinal && !isSF;
+  const tagText = isFinal ? '🏆 GRAND FINAL' : id;
+
+  function slotRow(slot, side){
+    const scoreVal = m['score' + side];
+    const cls = !bothReady ? 'pending'
+      : slot.teamId === winner ? 'winner'
+      : winner ? 'loser' : '';
+    const trophy = winner === slot.teamId ? `<span class="trophy">🏆</span>` : '';
+
+    let scoreEl = '';
+    if(bothReady && !isFinal){
+      if(IS_ADMIN){
+        const maxVal = isSF ? 7 : 4;
+        scoreEl = `<input class="score-box" type="number" min="0" max="${maxVal}" inputmode="numeric"
+          id="score-${id}-${side}" data-match="${id}" data-side="score${side}"
+          value="${scoreVal==null?'':scoreVal}">`;
+      } else if(scoreVal != null){
+        scoreEl = `<span class="score-display">${scoreVal}</span>`;
+      }
+    }
+
+    return `<div class="slot-row ${cls}" id="slot-${id}-${side}">
+      <span class="slot-name">${slot.label}${trophy}</span>
+      ${scoreEl}
+    </div>`;
+  }
+
+  let tbRow = '';
+  if(bothReady && !isFinal){
+    const tieAt = isSF ? 6 : 2;
+    if(m.scoreA === tieAt && m.scoreB === tieAt) tbRow = buildTbRow(id, m, isSF);
+  }
+
+  const finalSection = (isFinal && bothReady) ? buildFinalSection(id, m) : '';
+
+  let tieWarn = '';
+  if(IS_ADMIN && bothReady && !isFinal && m.scoreA != null && m.scoreB != null){
+    const tieAt = isSF ? 6 : 2;
+    if(m.scoreA === m.scoreB && m.scoreA !== tieAt){
+      tieWarn = `<div class="tie-warn">Scores can't be equal here — please correct.</div>`;
+    }
+  }
+
+  let champion = '';
+  if(isFinal && winner){
+    champion = `<div class="champion-banner">🏆 ${teamName(winner)}<br><span style="font-size:11px;font-weight:400;">Dionysos Open Champions</span></div>`;
+  }
+
+  return `<div class="match-card ${isFinal?'final-card':''} ${winner?'complete':''}" id="card-${id}">
+    <div class="tag"><span>${tagText}</span><span class="tag-time">${m.when}</span></div>
+    ${slotRow(aSlot,'A')}
+    ${slotRow(bSlot,'B')}
+    ${tbRow}
+    ${finalSection}
+    ${tieWarn}
+  </div>
+  ${champion}`;
+}
+
+function rankingColumnHTML(){
+  if(!ranking){
+    const done = RO12_ORDER.filter(id => getWinner(matches[id])).length;
+    return `<div class="col-head">Rankings</div>
+      <div class="col-sub">Seeds the Repechage &amp; Quarterfinal once all 6 Round of 12 matches are in.</div>
+      <div class="match-card"><div class="pending-note">Waiting on Round of 12 — ${done}/6 matches complete.</div></div>`;
+  }
+  const bands = [
+    {max:2,  cls:'rank-bye', label:'bye → SF'},
+    {max:4,  cls:'rank-qf',  label:'→ QF'},
+    {max:8,  cls:'rank-rep', label:'→ Repechage'},
+    {max:12, cls:'rank-out', label:'eliminated'},
+  ];
+  function bandFor(n){ return bands.find(b=>n<=b.max); }
+
+  const gamesByTeam = {};
+  RO12_ORDER.forEach(id=>{
+    const m = matches[id];
+    const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+    if(aSlot.teamId) gamesByTeam[aSlot.teamId] = m.scoreA;
+    if(bSlot.teamId) gamesByTeam[bSlot.teamId] = m.scoreB;
+  });
+
+  const rows = ranking.map((tid,i)=>{
+    const n = i+1;
+    const b = bandFor(n);
+    return `<div class="rank-row ${b.cls}" id="rank-row-${n}">
+      <span class="n">#${n}</span>
+      <span>${teamName(tid)}</span>
+      <span class="g">${gamesByTeam[tid]}g · ${b.label}</span>
+    </div>`;
+  }).join('');
+
+  return `<div class="col-head">Rankings</div>
+    <div class="rank-legend">
+      <span class="rank-bye">1-2 bye</span><span class="rank-qf">3-4 QF</span>
+      <span class="rank-rep">5-8 repechage</span><span class="rank-out">9-12 out</span>
+    </div>
+    <div class="match-card" style="padding:6px;">${rows}</div>`;
+}
+
+function render(){
+  ranking = computeRanking();
+
+  const col = (title, sub, bodyHTML) => `<div class="col">
+    <div class="col-head">${title}</div>
+    ${sub?`<div class="col-sub">${sub}</div>`:''}
+    ${bodyHTML}
+  </div>`;
+
+  const colsHTML = [
+    col('Round of 24','Fast4 · 12 matches',
+      ['R24-1','R24-2','R24-3','R24-4','R24-5','R24-6','R24-7','R24-8','R24-9','R24-10','R24-11','R24-12'].map(matchCard).join('')),
+    col('Round of 12','Fast4', RO12_ORDER.map(matchCard).join('')),
+    `<div class="col" style="width:230px;">${rankingColumnHTML()}</div>`,
+    col('Repechage','Fast4', ['REP1','REP2'].map(matchCard).join('')),
+    col('Quarterfinal','Fast4', ['QF1','QF2'].map(matchCard).join('')),
+    col('Semifinal','Best of 1 set', ['SF1','SF2'].map(matchCard).join('')),
+    col('Grand Final','Best of 2 sets', matchCard('FINAL')),
+  ].join('');
+
+  document.getElementById('columns').innerHTML = colsHTML;
+  requestAnimationFrame(drawConnectors);
+}
+
+// ============================================================
+// CONNECTORS
+// ============================================================
+function drawConnectors(){
+  const svg = document.getElementById('connSvg');
+  const inner = document.getElementById('bracketInner');
+  if(window.innerWidth < 900){ svg.innerHTML=''; return; }
+
+  const wrapRect = inner.getBoundingClientRect();
+  const w = inner.scrollWidth, h = inner.scrollHeight;
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+
+  let paths = '';
+  CONNECTORS.forEach(([fromId,toId])=>{
+    const fromEl = document.getElementById(fromId);
+    const toEl   = document.getElementById(toId);
+    if(!fromEl || !toEl) return;
+    const fr = fromEl.getBoundingClientRect();
+    const tr = toEl.getBoundingClientRect();
+    const x1 = fr.right  - wrapRect.left;
+    const y1 = fr.top    - wrapRect.top + fr.height/2;
+    const x2 = tr.left   - wrapRect.left;
+    const y2 = tr.top    - wrapRect.top + tr.height/2;
+    const cp = (x2-x1) * 0.45;
+    const done = fromEl.classList.contains('complete') || fromEl.classList.contains('rank-row');
+    paths += `<path class="conn-line ${done?'done':''}" d="M ${x1} ${y1} C ${x1+cp} ${y1} ${x2-cp} ${y2} ${x2} ${y2}"/>`;
+  });
+  svg.innerHTML = paths;
+}
+
+// ============================================================
+// FIREBASE SYNC
+// ============================================================
+const saveTimers = {};
+
+function saveToFirebase(matchId){
+  if(!IS_ADMIN) return;
+  clearTimeout(saveTimers[matchId]);
+  saveTimers[matchId] = setTimeout(()=>{
+    const m = matches[matchId];
+    const data = m.round === 'FINAL'
+      ? {s1A:m.s1A, s1B:m.s1B, s2A:m.s2A, s2B:m.s2B, mbA:m.mbA, mbB:m.mbB}
+      : {scoreA:m.scoreA, scoreB:m.scoreB, tbA:m.tbA, tbB:m.tbB};
+    db.collection('scores').doc(matchId).set(data);
+  }, 400);
+}
+
+db.collection('scores').onSnapshot(snapshot=>{
+  snapshot.forEach(docSnap=>{
+    const id = docSnap.id;
+    if(!matches[id]) return;
+    Object.assign(matches[id], docSnap.data());
+  });
+  render();
+});
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+document.getElementById('columns').addEventListener('input', e=>{
+  const t = e.target;
+  if(!t.classList.contains('score-box') || !IS_ADMIN) return;
+
+  const matchId = t.dataset.match;
+  const side    = t.dataset.side;
+  let   val     = t.value === '' ? null : Math.max(0, parseInt(t.value,10));
+  if(val != null && isNaN(val)) val = null;
+  matches[matchId][side] = val;
+
+  // Fast4: total games must not exceed 4
+  const m = matches[matchId];
+  if(val != null && !['SF','FINAL'].includes(m.round)){
+    if(side === 'scoreA' && m.scoreB != null && val + m.scoreB > 4){
+      val = Math.max(0, 4 - m.scoreB);
+      matches[matchId].scoreA = val;
+      t.value = val;
+    } else if(side === 'scoreB' && m.scoreA != null && val + m.scoreA > 4){
+      val = Math.max(0, 4 - m.scoreA);
+      matches[matchId].scoreB = val;
+      t.value = val;
+    }
+  }
+
+  saveToFirebase(matchId);
+
+  const activeId = t.id, selStart = t.selectionStart;
+  render();
+  const restore = document.getElementById(activeId);
+  if(restore){ restore.focus(); try{ restore.setSelectionRange(selStart,selStart); }catch(e){} }
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!IS_ADMIN || !confirm('Clear every score and reset the whole bracket?')) return;
+  const batch = db.batch();
+  Object.keys(matches).forEach(id=>{
+    const m = matches[id];
+    if(m.round === 'FINAL'){
+      m.s1A=m.s1B=m.s2A=m.s2B=m.mbA=m.mbB=null;
+      batch.set(db.collection('scores').doc(id),{s1A:null,s1B:null,s2A:null,s2B:null,mbA:null,mbB:null});
+    } else {
+      m.scoreA=m.scoreB=m.tbA=m.tbB=null;
+      batch.set(db.collection('scores').doc(id),{scoreA:null,scoreB:null,tbA:null,tbB:null});
+    }
+  });
+  batch.commit();
+  render();
+});
+
+document.getElementById('scrollFinalBtn').addEventListener('click', ()=>{
+  const el = document.getElementById('card-FINAL');
+  if(el) el.scrollIntoView({behavior:'smooth', inline:'center', block:'center'});
+});
+
+let resizeTO;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeTO);
+  resizeTO = setTimeout(drawConnectors, 120);
+});
+
+render();
+</script>
+</body>
+</html>
