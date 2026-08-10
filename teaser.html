@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Dionysos Open — Coming Soon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --turf:#3E7A46;
+    --turf-deep:#1E3F26;
+    --turf-light:#DCEBD3;
+    --clay:#C1552E;
+    --clay-deep:#8F3B1E;
+    --clay-mid:#E08A57;
+    --clay-light:#F0C6A8;
+    --clay-soft:#F3E4D3;
+    --cream:#F7F2E7;
+    --card:#FFFDF8;
+    --ink:#221C15;
+    --muted:#9C9686;
+    --line:#DCD3BF;
+    --font-display:'Fraunces', Georgia, serif;
+    --font-body:'Inter', -apple-system, sans-serif;
+    --font-mono:'Space Mono', 'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:var(--font-body);}
+  body{padding-bottom:60px;}
+
+  /* ---------- TEASER BANNER ---------- */
+  .teaser-banner{
+    background:var(--turf-deep); color:var(--turf-light);
+    font-family:var(--font-mono); font-size:12px; text-align:center;
+    padding:10px 16px; letter-spacing:0.12em; text-transform:uppercase;
+  }
+
+  /* ---------- HERO ---------- */
+  .hero{
+    background:
+      radial-gradient(circle at 15% 20%, rgba(62,122,70,0.20), transparent 45%),
+      linear-gradient(160deg, var(--clay-deep) 0%, #6E2C15 100%);
+    color:var(--cream);
+    padding:44px 28px 34px;
+    position:relative;
+    overflow:hidden;
+    border-bottom:4px solid var(--turf);
+  }
+  .hero::after{
+    content:"";
+    position:absolute; right:-60px; top:-60px; width:260px; height:260px;
+    border:2px dashed rgba(246,241,228,0.14); border-radius:50%;
+  }
+  .hero-eyebrow{
+    font-family:var(--font-mono); letter-spacing:.14em; text-transform:uppercase;
+    font-size:12px; color:var(--turf-light); margin-bottom:10px;
+  }
+  .hero h1{
+    font-family:var(--font-display); font-weight:700; font-size:clamp(28px,4.4vw,46px);
+    margin:0 0 8px; letter-spacing:-0.01em;
+  }
+  .hero p.sub{ margin:0 0 20px; font-size:15px; color:var(--clay-light); max-width:640px; line-height:1.5;}
+  .hero-meta{display:flex; flex-wrap:wrap; gap:10px;}
+  .pill{
+    font-family:var(--font-mono); font-size:12px; padding:6px 12px; border-radius:100px;
+    border:1px solid rgba(246,241,228,0.30); color:var(--cream); background:rgba(246,241,228,0.08);
+  }
+  .hero-actions{ margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{
+    font-family:var(--font-body); font-weight:600; font-size:13px; cursor:pointer;
+    padding:10px 16px; border-radius:8px; border:1px solid transparent; transition:transform .12s ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{ background:var(--turf); color:var(--cream); }
+  .btn-primary:hover{ background:#2F5F37; }
+
+  /* ---------- INFO PANEL ---------- */
+  details.info{ margin:18px 28px 0; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
+  details.info summary{
+    list-style:none; cursor:pointer; padding:14px 18px; font-weight:600; font-size:14px;
+    display:flex; align-items:center; justify-content:space-between; color:var(--turf-deep);
+  }
+  details.info summary::-webkit-details-marker{display:none;}
+  details.info summary::after{ content:"+"; font-family:var(--font-mono); font-size:18px; color:var(--clay);}
+  details.info[open] summary::after{ content:"–"; }
+  .info-body{ padding:0 18px 18px; font-size:13.5px; line-height:1.65; color:#4B4B44; display:grid; gap:16px; grid-template-columns:1fr 1fr;}
+  @media (max-width:760px){ .info-body{grid-template-columns:1fr;} }
+  .info-body h4{ margin:0 0 6px; font-family:var(--font-mono); font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--clay-deep); }
+  .info-body ul{ margin:0; padding-left:18px; }
+  .info-body li{ margin-bottom:4px; }
+  .sched-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .sched-table td{ padding:6px; border-bottom:1px solid var(--line); vertical-align:top;}
+  .sched-table td:first-child{ font-weight:600; white-space:nowrap; color:var(--turf-deep);}
+  .sched-table .times{ font-family:var(--font-mono); font-size:11.5px; color:#4B4B44; }
+  .sun-note{ font-size:11.5px; color:var(--clay-deep); margin-top:8px; font-style:italic; }
+
+  /* ---------- BRACKET ---------- */
+  .bracket-wrap{ overflow-x:auto; padding:30px 0 10px; margin-top:6px; }
+  .bracket-inner{ position:relative; display:inline-block; min-width:100%; padding:0 28px; }
+  #connSvg{ position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
+  .columns{ display:flex; gap:54px; position:relative; z-index:1; align-items:flex-start; }
+  .col{ display:flex; flex-direction:column; gap:22px; width:220px; flex:0 0 auto; }
+  .col-head{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--cream); background:var(--turf); display:inline-block; padding:5px 10px; border-radius:5px;
+    margin-bottom:2px; font-weight:700;
+  }
+  .col-sub{ font-size:11.5px; color:var(--muted); line-height:1.4; margin:-14px 0 4px; }
+
+  .match-card{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    box-shadow:0 1px 2px rgba(28,35,31,0.05); overflow:hidden;
+  }
+  .match-card .tag{
+    font-family:var(--font-mono); font-size:10px; letter-spacing:.04em; color:var(--turf-deep);
+    background:#EFEADA; padding:4px 10px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+  }
+  .tag-time{ color:var(--muted); font-weight:400; white-space:nowrap; }
+  .slot-row{ display:flex; align-items:center; padding:9px 10px; gap:8px; }
+  .slot-row + .slot-row{ border-top:1px dashed var(--line); }
+  .slot-name{ font-size:13px; line-height:1.25; color:var(--ink); }
+  .slot-row.hidden-pair .slot-name{
+    color:var(--muted); font-style:italic; font-size:12px;
+    background:repeating-linear-gradient(90deg, var(--line) 0, var(--line) 6px, transparent 6px, transparent 10px);
+    border-radius:3px; padding:2px 4px;
+  }
+  .slot-row.pending .slot-name{ color:var(--muted); font-style:italic; font-size:12px; }
+  .pending-note{ font-size:11.5px; color:var(--muted); padding:10px; font-style:italic; text-align:center; }
+
+  .final-card{ border:2px solid var(--clay-deep); }
+  .final-card .tag{ background:var(--clay-deep); color:var(--cream); font-weight:700; }
+  .final-card .tag .tag-time{ color:var(--clay-light); }
+
+  /* Ranking column */
+  .rank-row{ display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:7px; font-size:12.5px; }
+  .rank-row .n{ font-family:var(--font-mono); font-weight:700; width:20px; }
+  .rank-row .g{ margin-left:auto; font-family:var(--font-mono); font-size:11px; color:#6b6558; }
+  .rank-bye{ background:var(--clay-light); }
+  .rank-qf{ background:var(--turf-light); }
+  .rank-rep{ background:var(--clay-soft); }
+  .rank-out{ background:#EFEDE4; color:var(--muted); }
+  .rank-legend{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:2px; }
+  .rank-legend span{ font-size:10px; font-family:var(--font-mono); padding:3px 7px; border-radius:5px; }
+
+  .conn-line{ fill:none; stroke:var(--line); stroke-width:1.5; opacity:0.45; }
+  .conn-line.done{ stroke:var(--clay); stroke-width:2; opacity:0.8; }
+
+  @media (max-width:900px){
+    #connSvg{ display:none; }
+    .bracket-wrap{ overflow-x:visible; padding:20px 16px; }
+    .columns{ flex-direction:column; gap:30px; }
+    .col{ width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="teaser-banner">🎾 Pairs TBA — The Dionysos Open · 4 September 2026</div>
+
+<div class="hero">
+  <div class="hero-eyebrow">Jordan &amp; Lydia · Wedding Week · Tennis Tournament · 24 Teams</div>
+  <h1>The Dionysos Open</h1>
+  <p class="sub">The bracket is set. 24 pairs, one champion. Pair assignments will be revealed closer to the day.</p>
+  <div class="hero-meta">
+    <span class="pill">🏆 Grand Final — Fri 4 Sep, Late Afternoon</span>
+    <span class="pill">Fast4 through the Quarterfinal</span>
+    <span class="pill">Best of 1 set (SF) · Best of 2 sets (Final)</span>
+  </div>
+  <div class="hero-actions">
+    <button class="btn btn-primary" id="scrollFinalBtn">Jump to Grand Final →</button>
+  </div>
+</div>
+
+<details class="info">
+  <summary>Format, repechage rules &amp; day-by-day schedule</summary>
+  <div class="info-body">
+    <div>
+      <h4>Format &amp; scoring</h4>
+      <ul>
+        <li><strong>Round of 24, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — 4 games, one serve each, no-ad. At 2–2 a 7-point tiebreak decides the match.</li>
+        <li><strong>Semifinal:</strong> best of 1 set, no-ad, tiebreak at 6–6.</li>
+        <li><strong>Grand Final:</strong> best of 2 sets — match tiebreak decider if 1–1.</li>
+      </ul>
+      <h4 style="margin-top:14px;">How the repechage works</h4>
+      <ul>
+        <li>After all 6 Round of 12 matches finish, every team (6 winners + 6 losers) is ranked by games won.</li>
+        <li>Ranks 1 &amp; 2 get a bye straight to the Semifinal.</li>
+        <li>Ranks 3 &amp; 4 go to the Quarterfinal.</li>
+        <li>Ranks 5–8 (2 winners + 2 best-placed losers) play the Repechage for the last 2 Quarterfinal spots.</li>
+        <li>Ranks 9–12 are eliminated.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>Day-by-day court time (indicative)</h4>
+      <table class="sched-table">
+        <tr><td>Tue 1 Sep</td><td class="times">Afternoon — R24-1, R24-2</td></tr>
+        <tr><td>Wed 2 Sep</td><td class="times">Morning — R24-3, R24-4 · Afternoon — R24-5, R24-6, R24-7, R24-8</td></tr>
+        <tr><td>Thu 3 Sep</td><td class="times">Morning — R24-9, R24-10 (no further court time this day)</td></tr>
+        <tr><td>Fri 4 Sep</td><td class="times">Morning — R24-11, R24-12, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
+      </table>
+      <div class="sun-note">Times above are a rough guide. The court has no lights, so everything needs to wrap up before sundown, roughly 7:30pm in Kumlubük in early September.</div>
+    </div>
+  </div>
+</details>
+
+<div class="bracket-wrap">
+  <div class="bracket-inner" id="bracketInner">
+    <svg id="connSvg"></svg>
+    <div class="columns" id="columns"></div>
+  </div>
+</div>
+
+<script>
+// Pair labels — all hidden for teaser
+const PAIRS = {};
+for(let i=1;i<=24;i++) PAIRS['P'+i] = 'Pair '+i;
+
+function team(id){ return {type:'team', id}; }
+function winnerOf(of){ return {type:'winner', of}; }
+function rank(n){ return {type:'rank', n}; }
+
+const matches = {
+  'R24-1':  {round:'R24', a:team('P9'),        b:team('P12'),       when:'Tue 1 Sep · Afternoon'},
+  'R24-2':  {round:'R24', a:team('P22'),       b:team('P14'),       when:'Tue 1 Sep · Afternoon'},
+  'R24-3':  {round:'R24', a:team('P2'),        b:team('P4'),        when:'Wed 2 Sep · Morning'},
+  'R24-4':  {round:'R24', a:team('P6'),        b:team('P17'),       when:'Wed 2 Sep · Morning'},
+  'R24-5':  {round:'R24', a:team('P1'),        b:team('P5'),        when:'Wed 2 Sep · Afternoon'},
+  'R24-6':  {round:'R24', a:team('P7'),        b:team('P8'),        when:'Wed 2 Sep · Afternoon'},
+  'R24-7':  {round:'R24', a:team('P13'),       b:team('P15'),       when:'Wed 2 Sep · Afternoon'},
+  'R24-8':  {round:'R24', a:team('P16'),       b:team('P21'),       when:'Wed 2 Sep · Afternoon'},
+  'R24-9':  {round:'R24', a:team('P18'),       b:team('P19'),       when:'Thu 3 Sep · Morning'},
+  'R24-10': {round:'R24', a:team('P3'),        b:team('P10'),       when:'Thu 3 Sep · Morning'},
+  'R24-11': {round:'R24', a:team('P23'),       b:team('P24'),       when:'Fri 4 Sep · Morning'},
+  'R24-12': {round:'R24', a:team('P11'),       b:team('P20'),       when:'Fri 4 Sep · Morning'},
+
+  'RO12-A': {round:'RO12', a:winnerOf('R24-1'), b:winnerOf('R24-2'),  when:'Fri 4 Sep · Morning'},
+  'RO12-B': {round:'RO12', a:winnerOf('R24-3'), b:winnerOf('R24-4'),  when:'Fri 4 Sep · Morning'},
+  'RO12-C': {round:'RO12', a:winnerOf('R24-5'), b:winnerOf('R24-6'),  when:'Fri 4 Sep · Morning'},
+  'RO12-D': {round:'RO12', a:winnerOf('R24-7'), b:winnerOf('R24-8'),  when:'Fri 4 Sep · Morning'},
+  'RO12-E': {round:'RO12', a:winnerOf('R24-9'), b:winnerOf('R24-10'), when:'Fri 4 Sep · Morning'},
+  'RO12-F': {round:'RO12', a:winnerOf('R24-11'),b:winnerOf('R24-12'), when:'Fri 4 Sep · Morning'},
+
+  'REP1':   {round:'REP', a:rank(5), b:rank(8), when:'Fri 4 Sep · Afternoon'},
+  'REP2':   {round:'REP', a:rank(6), b:rank(7), when:'Fri 4 Sep · Afternoon'},
+
+  'QF1':    {round:'QF', a:rank(3), b:winnerOf('REP1'), when:'Fri 4 Sep · Afternoon'},
+  'QF2':    {round:'QF', a:rank(4), b:winnerOf('REP2'), when:'Fri 4 Sep · Afternoon'},
+
+  'SF1':    {round:'SF', a:rank(1), b:winnerOf('QF1'), when:'Fri 4 Sep · Afternoon'},
+  'SF2':    {round:'SF', a:rank(2), b:winnerOf('QF2'), when:'Fri 4 Sep · Afternoon'},
+
+  'FINAL':  {round:'FINAL', a:winnerOf('SF1'), b:winnerOf('SF2'), when:'Fri 4 Sep · Late Afternoon'},
+};
+
+const RO12_ORDER = ['RO12-A','RO12-B','RO12-C','RO12-D','RO12-E','RO12-F'];
+
+const CONNECTORS = [
+  ['card-R24-1', 'slot-RO12-A-A'], ['card-R24-2', 'slot-RO12-A-B'],
+  ['card-R24-3', 'slot-RO12-B-A'], ['card-R24-4', 'slot-RO12-B-B'],
+  ['card-R24-5', 'slot-RO12-C-A'], ['card-R24-6', 'slot-RO12-C-B'],
+  ['card-R24-7', 'slot-RO12-D-A'], ['card-R24-8', 'slot-RO12-D-B'],
+  ['card-R24-9', 'slot-RO12-E-A'], ['card-R24-10','slot-RO12-E-B'],
+  ['card-R24-11','slot-RO12-F-A'], ['card-R24-12','slot-RO12-F-B'],
+  ['card-REP1',  'slot-QF1-B'],    ['card-REP2',  'slot-QF2-B'],
+  ['card-QF1',   'slot-SF1-B'],    ['card-QF2',   'slot-SF2-B'],
+  ['card-SF1',   'slot-FINAL-A'],  ['card-SF2',   'slot-FINAL-B'],
+];
+
+// ============================================================
+// RENDER
+// ============================================================
+function resolveLabel(slot){
+  if(slot.type === 'team') return PAIRS[slot.id];
+  if(slot.type === 'winner') return `Winner — ${slot.of}`;
+  if(slot.type === 'rank') return `Seed: Rank ${slot.n}`;
+}
+
+function slotRow(slot, side, id){
+  const isTeam = slot.type === 'team';
+  const label = resolveLabel(slot);
+  const cls = isTeam ? 'hidden-pair' : 'pending';
+  return `<div class="slot-row ${cls}" id="slot-${id}-${side}">
+    <span class="slot-name">${label}</span>
+  </div>`;
+}
+
+function matchCard(id){
+  const m = matches[id];
+  const isFinal = m.round === 'FINAL';
+  const tagText = isFinal ? '🏆 GRAND FINAL' : id;
+
+  return `<div class="match-card ${isFinal?'final-card':''}" id="card-${id}">
+    <div class="tag"><span>${tagText}</span><span class="tag-time">${m.when}</span></div>
+    ${slotRow(m.a, 'A', id)}
+    ${slotRow(m.b, 'B', id)}
+  </div>`;
+}
+
+function rankingColumnHTML(){
+  const bands = [
+    {max:2,  cls:'rank-bye', label:'bye → SF'},
+    {max:4,  cls:'rank-qf',  label:'→ QF'},
+    {max:8,  cls:'rank-rep', label:'→ Repechage'},
+    {max:12, cls:'rank-out', label:'eliminated'},
+  ];
+  function bandFor(n){ return bands.find(b=>n<=b.max); }
+
+  const rows = Array.from({length:12},(_,i)=>{
+    const n = i+1;
+    const b = bandFor(n);
+    return `<div class="rank-row ${b.cls}" id="rank-row-${n}">
+      <span class="n">#${n}</span>
+      <span style="color:var(--muted);font-style:italic;font-size:12px;">TBD</span>
+      <span class="g">${b.label}</span>
+    </div>`;
+  }).join('');
+
+  return `<div class="col-head">Rankings</div>
+    <div class="rank-legend">
+      <span class="rank-bye">1-2 bye</span><span class="rank-qf">3-4 QF</span>
+      <span class="rank-rep">5-8 repechage</span><span class="rank-out">9-12 out</span>
+    </div>
+    <div class="match-card" style="padding:6px;">${rows}</div>`;
+}
+
+function render(){
+  const col = (title, sub, bodyHTML) => `<div class="col">
+    <div class="col-head">${title}</div>
+    ${sub?`<div class="col-sub">${sub}</div>`:''}
+    ${bodyHTML}
+  </div>`;
+
+  const colsHTML = [
+    col('Round of 24','Fast4 · 12 matches',
+      ['R24-1','R24-2','R24-3','R24-4','R24-5','R24-6','R24-7','R24-8','R24-9','R24-10','R24-11','R24-12'].map(matchCard).join('')),
+    col('Round of 12','Fast4', RO12_ORDER.map(matchCard).join('')),
+    `<div class="col" style="width:230px;">${rankingColumnHTML()}</div>`,
+    col('Repechage','Fast4', ['REP1','REP2'].map(matchCard).join('')),
+    col('Quarterfinal','Fast4', ['QF1','QF2'].map(matchCard).join('')),
+    col('Semifinal','Best of 1 set', ['SF1','SF2'].map(matchCard).join('')),
+    col('Grand Final','Best of 2 sets', matchCard('FINAL')),
+  ].join('');
+
+  document.getElementById('columns').innerHTML = colsHTML;
+  requestAnimationFrame(drawConnectors);
+}
+
+function drawConnectors(){
+  const svg = document.getElementById('connSvg');
+  const inner = document.getElementById('bracketInner');
+  if(window.innerWidth < 900){ svg.innerHTML=''; return; }
+
+  const wrapRect = inner.getBoundingClientRect();
+  const w = inner.scrollWidth, h = inner.scrollHeight;
+  svg.setAttribute('width', w);
+  svg.setAttribute('height', h);
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+
+  let paths = '';
+  CONNECTORS.forEach(([fromId,toId])=>{
+    const fromEl = document.getElementById(fromId);
+    const toEl   = document.getElementById(toId);
+    if(!fromEl || !toEl) return;
+    const fr = fromEl.getBoundingClientRect();
+    const tr = toEl.getBoundingClientRect();
+    const x1 = fr.right  - wrapRect.left;
+    const y1 = fr.top    - wrapRect.top + fr.height/2;
+    const x2 = tr.left   - wrapRect.left;
+    const y2 = tr.top    - wrapRect.top + tr.height/2;
+    const cp = (x2-x1) * 0.45;
+    paths += `<path class="conn-line" d="M ${x1} ${y1} C ${x1+cp} ${y1} ${x2-cp} ${y2} ${x2} ${y2}"/>`;
+  });
+  svg.innerHTML = paths;
+}
+
+document.getElementById('scrollFinalBtn').addEventListener('click', ()=>{
+  const el = document.getElementById('card-FINAL');
+  if(el) el.scrollIntoView({behavior:'smooth', inline:'center', block:'center'});
+});
+
+let resizeTO;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeTO);
+  resizeTO = setTimeout(drawConnectors, 120);
+});
+
+render();
+</script>
+</body>
+</html>
