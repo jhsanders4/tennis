@@ -158,9 +158,9 @@
 <div class="teaser-banner">🎾 Pairs TBA — The Dionysos Open · 4 September 2026</div>
 
 <div class="hero">
-  <div class="hero-eyebrow">Jordan &amp; Lydia · Wedding Week · Tennis Tournament · 24 Teams</div>
+  <div class="hero-eyebrow">Jordan &amp; Lydia · Wedding Week · Tennis Tournament · 23 Teams</div>
   <h1>The Dionysos Open</h1>
-  <p class="sub">The bracket is set. 24 pairs, one champion. Pair assignments will be revealed closer to the day.</p>
+  <p class="sub">The bracket is set. 23 pairs, one champion. Pair assignments will be revealed closer to the day.</p>
   <div class="hero-meta">
     <span class="pill">🏆 Grand Final — Fri 4 Sep, Late Afternoon</span>
     <span class="pill">Fast4 through the Quarterfinal</span>
@@ -177,7 +177,8 @@
     <div>
       <h4>Format &amp; scoring</h4>
       <ul>
-        <li><strong>Round of 24, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — 4 games, one serve each, no-ad. At 2–2 a 7-point tiebreak decides the match.</li>
+        <li><strong>Round of 22, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — 4 games, one serve each, no-ad. At 2–2 a 7-point tiebreak decides the match.</li>
+        <li><strong>#1 seed (Bo &amp; Sarah)</strong> enter directly at the Round of 12.</li>
         <li><strong>Semifinal:</strong> best of 1 set, no-ad, tiebreak at 6–6.</li>
         <li><strong>Grand Final:</strong> best of 2 sets — match tiebreak decider if 1–1.</li>
       </ul>
@@ -194,9 +195,9 @@
       <h4>Day-by-day court time (indicative)</h4>
       <table class="sched-table">
         <tr><td>Tue 1 Sep</td><td class="times">Afternoon — R24-1, R24-2</td></tr>
-        <tr><td>Wed 2 Sep</td><td class="times">Morning — R24-3, R24-4 · Afternoon — R24-5, R24-6, R24-7, R24-8</td></tr>
-        <tr><td>Thu 3 Sep</td><td class="times">Morning — R24-9, R24-10 (no further court time this day)</td></tr>
-        <tr><td>Fri 4 Sep</td><td class="times">Morning — R24-11, R24-12, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
+        <tr><td>Wed 2 Sep</td><td class="times">Morning — R24-3, R24-4 · Afternoon — R24-5, R24-6, R24-7</td></tr>
+        <tr><td>Thu 3 Sep</td><td class="times">Morning — R24-8, R24-9 (no further court time this day)</td></tr>
+        <tr><td>Fri 4 Sep</td><td class="times">Morning — R24-10, R24-11, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
       </table>
       <div class="sun-note">Times above are a rough guide. The court has no lights, so everything needs to wrap up before sundown, roughly 7:30pm in Kumlubük in early September.</div>
     </div>
@@ -211,34 +212,38 @@
 </div>
 
 <script>
-// Pair labels — all hidden for teaser
-const PAIRS = {};
-for(let i=1;i<=24;i++) PAIRS['P'+i] = 'Pair '+i;
+// Pair labels — all hidden for teaser (P3 retired, so excluded)
+const PAIRS = {
+  P1:'Pair 1', P2:'Pair 2', P4:'Pair 4', P5:'Pair 5', P6:'Pair 6',
+  P7:'Pair 7', P8:'Pair 8', P9:'Pair 9', P10:'Pair 10', P11:'Pair 11',
+  P12:'Pair 12', P13:'Pair 13', P14:'Pair 14', P15:'Pair 15', P16:'Pair 16',
+  P17:'Pair 17', P18:'Pair 18', P19:'Pair 19', P20:'Pair 20', P21:'Pair 21',
+  P22:'Pair 22', P23:'Pair 23', P24:'Pair 24',
+};
 
 function team(id){ return {type:'team', id}; }
 function winnerOf(of){ return {type:'winner', of}; }
 function rank(n){ return {type:'rank', n}; }
 
 const matches = {
-  'R24-1':  {round:'R24', a:team('P9'),        b:team('P12'),       when:'Tue 1 Sep · Afternoon'},
-  'R24-2':  {round:'R24', a:team('P22'),       b:team('P14'),       when:'Tue 1 Sep · Afternoon'},
-  'R24-3':  {round:'R24', a:team('P2'),        b:team('P4'),        when:'Wed 2 Sep · Morning'},
-  'R24-4':  {round:'R24', a:team('P6'),        b:team('P17'),       when:'Wed 2 Sep · Morning'},
-  'R24-5':  {round:'R24', a:team('P1'),        b:team('P5'),        when:'Wed 2 Sep · Afternoon'},
-  'R24-6':  {round:'R24', a:team('P7'),        b:team('P8'),        when:'Wed 2 Sep · Afternoon'},
-  'R24-7':  {round:'R24', a:team('P13'),       b:team('P15'),       when:'Wed 2 Sep · Afternoon'},
-  'R24-8':  {round:'R24', a:team('P16'),       b:team('P21'),       when:'Wed 2 Sep · Afternoon'},
-  'R24-9':  {round:'R24', a:team('P18'),       b:team('P19'),       when:'Thu 3 Sep · Morning'},
-  'R24-10': {round:'R24', a:team('P3'),        b:team('P10'),       when:'Thu 3 Sep · Morning'},
-  'R24-11': {round:'R24', a:team('P23'),       b:team('P24'),       when:'Fri 4 Sep · Morning'},
-  'R24-12': {round:'R24', a:team('P11'),       b:team('P20'),       when:'Fri 4 Sep · Morning'},
+  'R24-1':  {round:'R24', a:team('P9'),        b:team('P12'),        when:'Tue 1 Sep · Afternoon'},
+  'R24-2':  {round:'R24', a:team('P22'),       b:team('P14'),        when:'Tue 1 Sep · Afternoon'},
+  'R24-3':  {round:'R24', a:team('P2'),        b:team('P4'),         when:'Wed 2 Sep · Morning'},
+  'R24-4':  {round:'R24', a:team('P6'),        b:team('P17'),        when:'Wed 2 Sep · Morning'},
+  'R24-5':  {round:'R24', a:team('P7'),        b:team('P8'),         when:'Wed 2 Sep · Afternoon'},
+  'R24-6':  {round:'R24', a:team('P13'),       b:team('P15'),        when:'Wed 2 Sep · Afternoon'},
+  'R24-7':  {round:'R24', a:team('P16'),       b:team('P21'),        when:'Wed 2 Sep · Afternoon'},
+  'R24-8':  {round:'R24', a:team('P18'),       b:team('P19'),        when:'Thu 3 Sep · Morning'},
+  'R24-9':  {round:'R24', a:team('P5'),        b:team('P10'),        when:'Thu 3 Sep · Morning'},
+  'R24-10': {round:'R24', a:team('P23'),       b:team('P24'),        when:'Fri 4 Sep · Morning'},
+  'R24-11': {round:'R24', a:team('P11'),       b:team('P20'),        when:'Fri 4 Sep · Morning'},
 
   'RO12-A': {round:'RO12', a:winnerOf('R24-1'), b:winnerOf('R24-2'),  when:'Fri 4 Sep · Morning'},
   'RO12-B': {round:'RO12', a:winnerOf('R24-3'), b:winnerOf('R24-4'),  when:'Fri 4 Sep · Morning'},
   'RO12-C': {round:'RO12', a:winnerOf('R24-5'), b:winnerOf('R24-6'),  when:'Fri 4 Sep · Morning'},
   'RO12-D': {round:'RO12', a:winnerOf('R24-7'), b:winnerOf('R24-8'),  when:'Fri 4 Sep · Morning'},
   'RO12-E': {round:'RO12', a:winnerOf('R24-9'), b:winnerOf('R24-10'), when:'Fri 4 Sep · Morning'},
-  'RO12-F': {round:'RO12', a:winnerOf('R24-11'),b:winnerOf('R24-12'), when:'Fri 4 Sep · Morning'},
+  'RO12-F': {round:'RO12', a:team('P1'),         b:winnerOf('R24-11'), when:'Fri 4 Sep · Morning'},
 
   'REP1':   {round:'REP', a:rank(5), b:rank(8), when:'Fri 4 Sep · Afternoon'},
   'REP2':   {round:'REP', a:rank(6), b:rank(7), when:'Fri 4 Sep · Afternoon'},
@@ -260,7 +265,7 @@ const CONNECTORS = [
   ['card-R24-5', 'slot-RO12-C-A'], ['card-R24-6', 'slot-RO12-C-B'],
   ['card-R24-7', 'slot-RO12-D-A'], ['card-R24-8', 'slot-RO12-D-B'],
   ['card-R24-9', 'slot-RO12-E-A'], ['card-R24-10','slot-RO12-E-B'],
-  ['card-R24-11','slot-RO12-F-A'], ['card-R24-12','slot-RO12-F-B'],
+  ['card-R24-11','slot-RO12-F-B'],
   ['card-REP1',  'slot-QF1-B'],    ['card-REP2',  'slot-QF2-B'],
   ['card-QF1',   'slot-SF1-B'],    ['card-QF2',   'slot-SF2-B'],
   ['card-SF1',   'slot-FINAL-A'],  ['card-SF2',   'slot-FINAL-B'],
@@ -331,8 +336,8 @@ function render(){
   </div>`;
 
   const colsHTML = [
-    col('Round of 24','Fast4 · 12 matches',
-      ['R24-1','R24-2','R24-3','R24-4','R24-5','R24-6','R24-7','R24-8','R24-9','R24-10','R24-11','R24-12'].map(matchCard).join('')),
+    col('Round of 22','Fast4 · 11 matches',
+      ['R24-1','R24-2','R24-3','R24-4','R24-5','R24-6','R24-7','R24-8','R24-9','R24-10','R24-11'].map(matchCard).join('')),
     col('Round of 12','Fast4', RO12_ORDER.map(matchCard).join('')),
     `<div class="col" style="width:230px;">${rankingColumnHTML()}</div>`,
     col('Repechage','Fast4', ['REP1','REP2'].map(matchCard).join('')),
