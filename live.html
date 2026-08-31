@@ -401,12 +401,14 @@ const db = firebase.firestore();
 const ADMIN_PASSWORD = 'tennis2026';
 
 const IS_ADMIN = (()=>{
-  if(!new URLSearchParams(location.search).has('admin')) return false;
+  // Primary: session set by /score login page
   if(sessionStorage.getItem('adminAuth') === '1') return true;
-  const pw = prompt('Admin password:');
-  if(pw === ADMIN_PASSWORD){ sessionStorage.setItem('adminAuth','1'); return true; }
-  alert('Wrong password.');
-  history.replaceState(null,'',location.pathname);
+  // Legacy: direct ?admin URL (still prompts for password)
+  if(new URLSearchParams(location.search).has('admin')){
+    const pw = prompt('Admin password:');
+    if(pw === ADMIN_PASSWORD){ sessionStorage.setItem('adminAuth','1'); return true; }
+    history.replaceState(null,'',location.pathname);
+  }
   return false;
 })();
 

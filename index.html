@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Dionysos Open — Coming Soon</title>
+<title>The Dionysos Open — Live Bracket</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -20,6 +22,7 @@
     --card:#FFFDF8;
     --ink:#221C15;
     --muted:#9C9686;
+    --error:#A6302B;
     --line:#DCD3BF;
     --font-display:'Fraunces', Georgia, serif;
     --font-body:'Inter', -apple-system, sans-serif;
@@ -29,11 +32,11 @@
   html,body{margin:0;padding:0;background:var(--cream);color:var(--ink);font-family:var(--font-body);}
   body{padding-bottom:60px;}
 
-  /* ---------- TEASER BANNER ---------- */
-  .teaser-banner{
-    background:var(--turf-deep); color:var(--turf-light);
-    font-family:var(--font-mono); font-size:12px; text-align:center;
-    padding:10px 16px; letter-spacing:0.12em; text-transform:uppercase;
+  /* ---------- ADMIN BANNER ---------- */
+  .admin-banner{
+    background:var(--turf-deep);color:var(--turf-light);
+    font-family:var(--font-mono);font-size:12px;text-align:center;
+    padding:8px 16px;letter-spacing:0.1em;text-transform:uppercase;
   }
 
   /* ---------- HERO ---------- */
@@ -69,11 +72,13 @@
   .hero-actions{ margin-top:22px; display:flex; gap:10px; flex-wrap:wrap; }
   .btn{
     font-family:var(--font-body); font-weight:600; font-size:13px; cursor:pointer;
-    padding:10px 16px; border-radius:8px; border:1px solid transparent; transition:transform .12s ease;
+    padding:10px 16px; border-radius:8px; border:1px solid transparent; transition:transform .12s ease, background .15s ease;
   }
   .btn:active{ transform:scale(.97); }
   .btn-primary{ background:var(--turf); color:var(--cream); }
   .btn-primary:hover{ background:#2F5F37; }
+  .btn-ghost{ background:transparent; color:var(--cream); border-color:rgba(246,241,228,0.38); }
+  .btn-ghost:hover{ background:rgba(246,241,228,0.10); }
 
   /* ---------- INFO PANEL ---------- */
   details.info{ margin:18px 28px 0; background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden;}
@@ -99,8 +104,8 @@
   .bracket-wrap{ overflow-x:auto; padding:30px 0 10px; margin-top:6px; }
   .bracket-inner{ position:relative; display:inline-block; min-width:100%; padding:0 28px; }
   #connSvg{ position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
-  .columns{ display:flex; gap:54px; position:relative; z-index:1; align-items:flex-start; }
-  .col{ display:flex; flex-direction:column; gap:22px; width:220px; flex:0 0 auto; }
+  .columns{ display:flex; gap:54px; position:relative; z-index:1; align-items:center; }
+  .col{ display:flex; flex-direction:column; gap:22px; width:250px; flex:0 0 auto; }
   .col-head{
     font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
     color:var(--cream); background:var(--turf); display:inline-block; padding:5px 10px; border-radius:5px;
@@ -110,26 +115,69 @@
 
   .match-card{
     background:var(--card); border:1px solid var(--line); border-radius:10px;
-    box-shadow:0 1px 2px rgba(28,35,31,0.05); overflow:hidden;
+    box-shadow:0 1px 2px rgba(28,35,31,0.05);
+    overflow:hidden; transition:box-shadow .2s ease, border-color .2s ease;
   }
+  .match-card.complete{ border-color:var(--clay); box-shadow:0 2px 10px rgba(193,85,46,0.20); }
   .match-card .tag{
     font-family:var(--font-mono); font-size:10px; letter-spacing:.04em; color:var(--turf-deep);
     background:#EFEADA; padding:4px 10px; border-bottom:1px solid var(--line);
     display:flex; align-items:center; justify-content:space-between; gap:6px;
   }
   .tag-time{ color:var(--muted); font-weight:400; white-space:nowrap; }
-  .slot-row{ display:flex; align-items:center; padding:9px 10px; gap:8px; }
+  .slot-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 10px; gap:8px; }
   .slot-row + .slot-row{ border-top:1px dashed var(--line); }
   .slot-name{ font-size:13px; line-height:1.25; color:var(--ink); }
-  .slot-row.hidden-pair .slot-name{
-    color:var(--muted); font-style:italic; font-size:12px;
-  }
   .slot-row.pending .slot-name{ color:var(--muted); font-style:italic; font-size:12px; }
+  .slot-row.winner .slot-name{ font-weight:700; color:var(--clay-deep); }
+  .slot-row.loser .slot-name{ color:var(--muted); text-decoration:line-through; text-decoration-color:var(--line); }
+  .score-box{
+    width:38px; height:30px; text-align:center; font-family:var(--font-mono); font-weight:700; font-size:14px;
+    background:var(--turf-deep); color:var(--clay-light); border:1px solid #14301B; border-radius:5px; flex:0 0 auto;
+  }
+  .score-box:focus{ outline:2px solid var(--clay); outline-offset:1px; }
+  .score-box::-webkit-outer-spin-button, .score-box::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .trophy{ font-size:13px; margin-left:6px; }
+  .tie-warn{ font-size:11px; color:var(--error); padding:0 10px 8px; margin-top:-4px; }
   .pending-note{ font-size:11.5px; color:var(--muted); padding:10px; font-style:italic; text-align:center; }
 
-  .final-card{ border:2px solid var(--clay-deep); }
-  .final-card .tag{ background:var(--clay-deep); color:var(--cream); font-weight:700; }
-  .final-card .tag .tag-time{ color:var(--clay-light); }
+  /* Public read-only score chip */
+  .score-display{
+    width:38px; height:30px; display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); font-weight:700; font-size:14px;
+    background:var(--turf-deep); color:var(--clay-light); border-radius:5px; flex:0 0 auto;
+  }
+
+  /* Tiebreak row */
+  .tb-row{
+    display:flex; align-items:center; gap:8px; padding:6px 10px;
+    background:rgba(193,85,46,0.06); border-top:1px dashed var(--line);
+  }
+  .tb-label{
+    font-family:var(--font-mono); font-size:10.5px; color:var(--clay-deep);
+    text-transform:uppercase; letter-spacing:0.07em; flex:1;
+  }
+  .tb-sep, .set-sep{
+    font-family:var(--font-mono); font-weight:700; color:var(--muted); padding:0 2px;
+  }
+  .tb-score{
+    font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--clay-deep);
+  }
+  .tb-box{ width:34px !important; }
+
+  /* Final score section */
+  .final-score-section{
+    padding:6px 10px 8px; border-top:1px dashed var(--line);
+    background:rgba(193,85,46,0.04); display:flex; flex-direction:column; gap:4px;
+  }
+  .final-set-row{ display:flex; align-items:center; gap:6px; padding:2px 0; }
+  .set-label{
+    font-family:var(--font-mono); font-size:10.5px; text-transform:uppercase;
+    letter-spacing:0.07em; color:var(--clay-deep); width:72px; flex:0 0 auto;
+  }
+  .final-score-pub{
+    font-family:var(--font-mono); font-size:12.5px; font-weight:700; color:var(--clay-deep); padding:4px 0;
+  }
 
   /* Ranking column */
   .rank-row{ display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:7px; font-size:12.5px; }
@@ -142,6 +190,18 @@
   .rank-legend{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:2px; }
   .rank-legend span{ font-size:10px; font-family:var(--font-mono); padding:3px 7px; border-radius:5px; }
 
+  .final-card{ border:2px solid var(--clay-deep); }
+  .final-card .tag{ background:var(--clay-deep); color:var(--cream); font-weight:700; }
+  .final-card .tag .tag-time{ color:var(--clay-light); }
+  .champion-banner{
+    margin-top:4px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:15px;
+    color:var(--turf-deep); background:linear-gradient(100deg, var(--clay-light), #FBEFD9, var(--clay-light));
+    background-size:200% 100%; animation:shimmer 3.5s linear infinite; padding:12px 10px; border-radius:8px;
+    line-height:1.4;
+  }
+  @media (prefers-reduced-motion: reduce){ .champion-banner{ animation:none; } }
+  @keyframes shimmer{ 0%{background-position:0% 0;} 100%{background-position:200% 0;} }
+
   .conn-line{ fill:none; stroke:var(--line); stroke-width:1.5; opacity:0.45; }
   .conn-line.done{ stroke:var(--clay); stroke-width:2; opacity:0.8; }
 
@@ -151,16 +211,97 @@
     .columns{ flex-direction:column; gap:30px; }
     .col{ width:100%; }
   }
+
+  /* ---------- CLICKABLE SLOT NAME ---------- */
+  .slot-name-link{
+    cursor:pointer;
+    text-decoration:underline;
+    text-decoration-color:rgba(143,59,30,0.25);
+    text-underline-offset:2px;
+    transition:color .12s ease;
+  }
+  .slot-name-link:hover{ color:var(--clay-deep); text-decoration-color:var(--clay); }
+
+  /* ---------- PROFILE MODAL ---------- */
+  .profile-modal{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,0.72);
+    z-index:9999; align-items:center; justify-content:center; padding:16px; cursor:zoom-out;
+  }
+  .profile-modal.open{ display:flex; }
+  .profile-modal-box{
+    background:var(--card); border-radius:12px; max-width:620px; width:100%;
+    overflow:hidden; box-shadow:0 8px 40px rgba(0,0,0,0.5); cursor:default;
+  }
+  .profile-modal-head{
+    background:var(--clay-deep); color:var(--cream); padding:12px 16px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .profile-modal-title{
+    font-family:var(--font-display); font-size:15px; font-weight:700; line-height:1.3;
+  }
+  .profile-modal-close{
+    background:none; border:none; color:var(--cream); font-size:22px; line-height:1;
+    cursor:pointer; opacity:0.75; padding:0 2px; flex:0 0 auto;
+  }
+  .profile-modal-close:hover{ opacity:1; }
+  .profile-modal-body{
+    display:grid; grid-template-columns:1fr 1fr; gap:12px; padding:14px;
+  }
+  @media(max-width:480px){ .profile-modal-body{ grid-template-columns:1fr; } }
+  .player-card-modal{
+    background:var(--cream); border:1px solid var(--line); border-radius:8px; padding:12px;
+  }
+  .player-card-modal .pcm-name{ font-weight:700; font-size:14px; margin-bottom:3px; color:var(--ink); }
+  .player-card-modal .pcm-rating{
+    font-family:var(--font-mono); font-size:10px; text-transform:uppercase;
+    letter-spacing:0.07em; color:var(--clay-deep); margin-bottom:9px;
+  }
+  .player-card-modal .pcm-bio{ font-size:12px; line-height:1.7; color:#4B4B44; }
+  .player-card-modal .pcm-no-bio{ font-size:12px; color:var(--muted); font-style:italic; }
+
+  /* ---------- PROFILES SECTION ---------- */
+  .profiles-section{ margin:36px 28px 0; }
+  @media(max-width:640px){ .profiles-section{ margin:28px 16px 0; } }
+  .profiles-section-head{
+    font-family:var(--font-display); font-size:clamp(20px,3vw,28px); font-weight:700;
+    color:var(--ink); margin:0 0 4px;
+  }
+  .profiles-section-sub{
+    font-size:12px; color:var(--muted); margin:0 0 18px;
+    font-family:var(--font-mono); letter-spacing:0.08em; text-transform:uppercase;
+  }
+  .profiles-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:12px;
+  }
+  .profile-card{
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:14px; box-shadow:0 1px 2px rgba(28,35,31,0.04);
+  }
+  .profile-card .pc-header{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:9px;
+  }
+  .profile-card .pc-name{ font-weight:700; font-size:13.5px; line-height:1.25; color:var(--ink); }
+  .profile-card .pc-pair{
+    font-family:var(--font-mono); font-size:10px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:0.05em; margin-top:3px;
+  }
+  .profile-card .pc-rating{
+    font-family:var(--font-mono); font-size:11px; font-weight:700;
+    background:var(--turf-deep); color:var(--cream); padding:3px 8px;
+    border-radius:5px; white-space:nowrap; flex:0 0 auto;
+  }
+  .profile-card .pc-bio{ font-size:12.5px; line-height:1.7; color:#4B4B44; }
+  .profile-card .pc-no-bio{ font-size:12.5px; color:var(--muted); font-style:italic; }
 </style>
 </head>
 <body>
 
-<div class="teaser-banner">🎾 Pairs TBA — The Dionysos Open · 4 September 2026</div>
+<div id="adminBanner" style="display:none" class="admin-banner">⚙ Admin Mode — scores are live</div>
 
 <div class="hero">
   <div class="hero-eyebrow">Jordan &amp; Lydia · Wedding Week · Tennis Tournament · 23 Teams</div>
   <h1>The Dionysos Open</h1>
-  <p class="sub">The bracket is set. 23 pairs, one champion. Pair assignments will be revealed closer to the day.</p>
+  <p class="sub">Round of 22 → Round of 12 → Repechage → Quarterfinal → Semifinal → Grand Final.</p>
   <div class="hero-meta">
     <span class="pill">🏆 Grand Final — Fri 4 Sep, Late Afternoon</span>
     <span class="pill">Fast4 through the Quarterfinal</span>
@@ -168,6 +309,7 @@
   </div>
   <div class="hero-actions">
     <button class="btn btn-primary" id="scrollFinalBtn">Jump to Grand Final →</button>
+    <button class="btn btn-ghost" id="resetBtn" style="display:none">Reset all scores</button>
   </div>
 </div>
 
@@ -177,10 +319,19 @@
     <div>
       <h4>Format &amp; scoring</h4>
       <ul>
-        <li><strong>Round of 22, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — 4 games, one serve each, no-ad. At 2–2 a 7-point tiebreak decides the match.</li>
-        <li><strong>#1 seed (Bo &amp; Sarah)</strong> enter directly at the Round of 12.</li>
+        <li><strong>Round of 22, Round of 12, Repechage &amp; Quarterfinal:</strong> Fast4 — first to 4 games wins, one serve each point, no advantage (deuce goes to a sudden-death point). If it reaches 2–2, a 7-point tiebreak decides the match.</li>
         <li><strong>Semifinal:</strong> best of 1 set, no-ad, tiebreak at 6–6.</li>
         <li><strong>Grand Final:</strong> best of 2 sets — match tiebreak decider if 1–1.</li>
+        <li><strong>#1 seed (Bo &amp; Sarah)</strong> enter directly at the Round of 12.</li>
+      </ul>
+      <h4 style="margin-top:14px;">How a tiebreak works</h4>
+      <ul>
+        <li>A tiebreak is a short sudden-death game used to decide a set that is level.</li>
+        <li>Players take turns serving — first 2 points each, then 1 point each from then on (the server changes every point after the first two).</li>
+        <li><strong>Fast4 tiebreak (at 2–2):</strong> first to 7 points wins. No need to win by 2.</li>
+        <li><strong>Semifinal tiebreak (at 6–6):</strong> first to 7 points, must win by 2 (so could go 8–6, 9–7, etc.).</li>
+        <li><strong>Grand Final match tiebreak (if sets are 1–1):</strong> first to 10 points, must win by 2.</li>
+        <li>To start the tiebreak, the player whose turn it is to serve serves the first point from the deuce side. Their opponent then serves the next 2 points, and you alternate every 2 serves from there.</li>
       </ul>
       <h4 style="margin-top:14px;">How the repechage works</h4>
       <ul>
@@ -194,12 +345,12 @@
     <div>
       <h4>Day-by-day court time (indicative)</h4>
       <table class="sched-table">
-        <tr><td>Tue 1 Sep</td><td class="times">Afternoon — R24-1, R24-2</td></tr>
-        <tr><td>Wed 2 Sep</td><td class="times">Morning — R24-3, R24-4 · Afternoon — R24-5, R24-6, R24-7</td></tr>
-        <tr><td>Thu 3 Sep</td><td class="times">Morning — R24-8, R24-9 (no further court time this day)</td></tr>
-        <tr><td>Fri 4 Sep</td><td class="times">Morning — R24-10, R24-11, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
+        <tr><td>Tue 1 Sep</td><td class="times">Afternoon — R22-1, R22-2</td></tr>
+        <tr><td>Wed 2 Sep</td><td class="times">Morning — R22-3, R22-4 · Afternoon — R22-5, R22-6, R22-7</td></tr>
+        <tr><td>Thu 3 Sep</td><td class="times">Morning — R22-8, R22-9 (no further court time this day)</td></tr>
+        <tr><td>Fri 4 Sep</td><td class="times">Morning — R22-10, R22-11, Round of 12 · Afternoon — Repechage, Quarterfinal, Semis, Grand Final (Late Afternoon)</td></tr>
       </table>
-      <div class="sun-note">Times above are a rough guide. The court has no lights, so everything needs to wrap up before sundown, roughly 7:30pm in Kumlubük in early September.</div>
+      <div class="sun-note">Times above are a rough guide — teams will confirm exact slots closer to the day. The court has no lights, so everything needs to wrap up before sundown, roughly 7:30pm in Kumlubük in early September.</div>
     </div>
   </div>
 </details>
@@ -211,97 +362,457 @@
   </div>
 </div>
 
+<!-- Profile popup modal -->
+<div id="profileModal" class="profile-modal">
+  <div class="profile-modal-box">
+    <div class="profile-modal-head">
+      <span class="profile-modal-title" id="profileModalTitle"></span>
+      <button class="profile-modal-close" id="profileModalClose" aria-label="Close">&#x2715;</button>
+    </div>
+    <div class="profile-modal-body" id="profileModalBody"></div>
+  </div>
+</div>
+
+<!-- Player profiles section -->
+<section class="profiles-section" id="profilesSection">
+  <h2 class="profiles-section-head">Player Profiles</h2>
+  <p class="profiles-section-sub">23 pairs · 46 players · tap a name in the draw to view</p>
+  <div class="profiles-grid" id="profilesGrid"></div>
+</section>
+
 <script>
-// Pair labels — all hidden for teaser (P3 retired, so excluded)
-const PAIRS = {
-  P1:'Pair 1', P2:'Pair 2', P4:'Pair 4', P5:'Pair 5', P6:'Pair 6',
-  P7:'Pair 7', P8:'Pair 8', P9:'Pair 9', P10:'Pair 10', P11:'Pair 11',
-  P12:'Pair 12', P13:'Pair 13', P14:'Pair 14', P15:'Pair 15', P16:'Pair 16',
-  P17:'Pair 17', P18:'Pair 18', P19:'Pair 19', P20:'Pair 20', P21:'Pair 21',
-  P22:'Pair 22', P23:'Pair 23', P24:'Pair 24',
+// ============================================================
+// FIREBASE
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyAaIwUMqg2O13OIOEfIHR9TfXimUiGCYkQ",
+  authDomain: "dionysos-open.firebaseapp.com",
+  projectId: "dionysos-open",
+  storageBucket: "dionysos-open.firebasestorage.app",
+  messagingSenderId: "210643719567",
+  appId: "1:210643719567:web:6fda373fc1ca8ff561e7fa"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ============================================================
+// ADMIN MODE
+// ============================================================
+const ADMIN_PASSWORD = 'tennis2026';
+
+const IS_ADMIN = (()=>{
+  // Primary: session set by /score login page
+  if(sessionStorage.getItem('adminAuth') === '1') return true;
+  // Legacy: direct ?admin URL (still prompts for password)
+  if(new URLSearchParams(location.search).has('admin')){
+    const pw = prompt('Admin password:');
+    if(pw === ADMIN_PASSWORD){ sessionStorage.setItem('adminAuth','1'); return true; }
+    history.replaceState(null,'',location.pathname);
+  }
+  return false;
+})();
+
+if(IS_ADMIN){
+  document.getElementById('adminBanner').style.display = 'block';
+  document.getElementById('resetBtn').style.display = '';
+}
+
+// ============================================================
+// TEAMS
+// ============================================================
+const TEAMS = {
+  P1:  "Bo O'Brien & Sarah Simpson",
+  P2:  "James Carlile & Lydia Turman",
+  P4:  "Max Leishman & Annemarie Muir",
+  P5:  "Jordan Sanders & Josie Di Giovanni",
+  P6:  "Blake Sanders & Dee Murray",
+  P7:  "Ross Michelle & Lucy McFarlane",
+  P8:  "Phil Wylie & Kelli Ng",
+  P9:  "Chris Barratt & Lauren Gathercole",
+  P10: "Scott Elliss & Georgia Welsh",
+  P11: "Darcy Bateman & Barbara Cassani",
+  P12: "Jack Whiting & Matilda Leishman",
+  P13: "Thomas Liew & Erin Depledge",
+  P14: "Jeremy Fry & Dan Horne",
+  P15: "Nathan Scarfo & James Storey",
+  P16: "Tom Crump & Alexis Heim",
+  P17: "Jack Leishman & Nick Crawford",
+  P18: "Dave Franks & Courtney Dettrich",
+  P19: "Peter Littleyuile & Jane Hale",
+  P20: "Guy Davis & Heidi Begala",
+  P21: "Matt Schulte & Maddie Begala",
+  P22: "Lance Canavan & Libby Littleyuile",
+  P23: "Marius Lammers & Jack Howard",
+  P24: "Anthony Stewart & Declan Sayce",
 };
 
+// ============================================================
+// PLAYER PROFILES
+// ============================================================
+const PROFILES = {
+  "Bo O'Brien":        { rating:7, bio:"Follows the professional tennis circuit around the world as if he is part of it. Rarely seen out of a pair of sneakers, and owns more fluro Uniqlo kit than Roger Federer. Expect big serves, a strong forehand and celebrations in any one of five foreign languages from this #1 seed." },
+  "James Carlile":     { rating:6, bio:"Highly rated — mostly by himself — in private. Unassuming demeanour on the outside, but has had the Dionysos Open firmly in his sights (and morning visualisation ritual) for the past 12 months. Expect to see him fresh from a restful night's sleep (face mask, cucumbers on eyes), warming up in full white Nike kit from 7am on the morning of his first match." },
+  "Jordan Sanders":    { rating:5, bio:"" },
+  "Blake Sanders":     { rating:5, bio:"All the gear and (some) idea. If championships could be measured in quality and quantity of kit, his resume would read something like Novak Djokovic's. A lot to play for after losing to his younger brother just over 6 months ago, but he will be sure to look the part, no matter the outcome." },
+  "Ross Michelle":     { rating:5, bio:"Junior nicknames included 'Popeye' on account of his disproportionately large forearms. The Tamworth Tornado has traded the court for ultramarathons in recent times, so will have the stamina to go deep should he make it." },
+  "Phil Wylie":        { rating:5, bio:"Should have been an Italian. Likely to wake up, have an espresso, dart, try some activity for 45 minutes, and then settle in for a long lunch and siesta. Game modelled on early 2000's Lleyton Hewitt. Hat backwards. Performance dependent on the preceding evenings events — and whether Phil can remember where (or who) he is." },
+  "Chris Barratt":     { rating:5, bio:"Exceptional hair. With his home ice bath and sauna, the only inflation Chris suffers is an inflated ego. His backhand, inspired by Roger Federer, looks more like a Kyrgios underarm — serving up laughs, not winners. Refined technique suited to Med conditions. Expected to take early scalps and then buckle once the heat turns up." },
+  "Scott Elliss":      { rating:5, bio:"Former junior champion that refined his ground strokes at altitude on the pristine backyard court in the Adelaide Hills. Descendant of elite athletic ability, however severely out of touch. Will look to hit winners off each shot. Strong believer that a quick game's a good game." },
+  "Darcy Bateman":     { rating:5, bio:"A cattle farmer from the southeast of SA who monitors body condition scores and calving ease EBVs with the same precision most people reserve for a fantasy football team. His bullocks have won more silverware than most of this draw combined, but whether his agricultural discipline translates to the court remains to be seen. Never write off a man who gets up at 5am every day just to check on his cows." },
+  "Jack Whiting":      { rating:5, bio:"Grew up with a grass court in the backyard, which explains both the ability and the sense of entitlement. Jack is light on power but heavy on cunning — watch out for the drop shot. Travelling solo without his wife and daughter, expect him to be either too hungover to hold a racquet, or cornering anyone within earshot to talk about One Nation. Possibly both." },
+  "Thomas Liew":       { rating:5, bio:"Boyfriends of Instagram have been licking their lips all year after hearing Thomas 'Buddha' Liew would be on holiday in Türkiye in September. As they say, the pursuit of content never sleeps, and Buddha is one of the hardest workers you will meet behind a lens. Football career claim to fame: subject of a Nic Natanui chase-down tackle, bookmarked on X for convenient viewing." },
+  "Jeremy Fry":        { rating:5, bio:"Good player. Hewitt-esque battler — will stay in the game and achieve more than expected. Not competitive once the Big Four from Leyburn come into the tournament." },
+  "Nathan Scarfo":     { rating:5, bio:"Twenty years between drinks, then one invitation to the Dionysos Open and suddenly the Tiny Dancer is back with racquet in hand. Was not happy with his initial seeding, however tournament officials were concerned with his ability to see over the net. A year of coaching and competition says he means business. Tony Mokbel always did." },
+  "Tom Crump":         { rating:5, bio:"Tom's tennis has been likened to a McDonald's dessert menu — limited breadth, with 1-2 highlights. Reliable, good value but may not win any awards. Soft serve and sometimes flaky. Form highly dependent on evening antics — if you see Crumpy doing his best blue-tongue lizard impersonation pre-10pm, the odds may be in your favour." },
+  "Jane Hale":         { rating:5, bio:"Not competitive at all. The highest seeded female player at the Dionysos Open, as requested (demanded). Not beyond her to break a racquet or yell at the chair umpire if she feels hard done by." },
+  "Peter Littleyuile": { rating:5, bio:"Could be mistaken for a cast member of Prison Break, but has come a long way since the days of throwing his racquet and swinging hockeysticks. Expectations are high on recent form (runner up in the 2025 GUBA Cup) for the Dionysos Open." },
+  "Declan Sayce":      { rating:5, bio:"Mobile across court, with a caterpillar on the upper lip in a nod to John 'Newk' Newcombe. Learnt Indonesian to ask his now mother-in-law for her daughter's hand in marriage. A shame he has not applied himself in the same way to his tennis. Or his moustache." },
+  "Max Leishman":      { rating:4, bio:"If you've ever wondered whether getting tennis lessons is a good way to find love, ask Max. Prefers American Doubles when it comes to tennis lessons." },
+  "Jack Leishman":     { rating:4, bio:"Architect by trade. Built like a drafting table — all edges, no muscle, somehow still generates more torque than physically possible. Precision-obsessed to a fault. Will call a let on a ball that clipped the net by 0.3mm that only he could hear. Has strong opinions about the net height being 0.5cm off regulation and will not let it go." },
+  "Dave Franks":       { rating:4, bio:"Plays like Stan Wawrinka, but 10 years after retirement and minus any natural ability or professional coaching. Comes from strong farming stock, however the closest he has been to a farm was on his wedding day. He has been living in his wife's tennis shadow ever since." },
+  "Guy Davis":         { rating:4, bio:"From swimming the English Channel to podium finishes in the Masters. Guy may be a fish out of water on court, but natural athletic ability and a competitive spirit to rival anyone half his age will hold him in good stead throughout the Open." },
+  "Lance Canavan":     { rating:4, bio:"Known as Lance to his colleagues, Lottie to his friends, and Lloyd to his customers on the street corner. With a standing subscription to iHerb, Lloyd may come under close scrutiny from WADA. Bryan Johnson poster takes pride of place on the wall at home. If he logs an 80+ sleep score and gets his cocktail of drugs just right, expect him to come out firing." },
+  "Marius Lammers":    { rating:4, bio:"South African squash convert who only picked up a racket two years ago. Improvement has been swift — though mostly in an attempt to stop being destroyed by his wife. If you beat him, expect a cheating accusation." },
+  "Anthony Stewart":   { rating:4, bio:"Corporate disciple turned startup convert, changing the world one battery at a time. Tracks his international trips in line with tennis scoring. Completely unjustified confidence to rip down-the-line winners every chance he gets. High on flair, low on high-percentage tennis — the startup approach applied to sport." },
+  "Jack Howard":       { rating:4, bio:"Bowls left handed. Bats right handed. Who knows how he plays tennis. Much like Gimli, very dangerous across short distances but stamina may be his downfall should he make it deep into the finals." },
+  "Libby Littleyuile": { rating:4, bio:"Highly touted junior and GUBA Cup winner. Spent her formative years losing convincingly to her first born sibling on her home court. Will be looking for retribution after a long stint away from the game." },
+  "Maddie Begala":     { rating:4, bio:"If the Williams sisters were twins, had blonde hair, green eyes and grew up with a tennis court in their back garden, then you could easily draw comparisons to the Begala Twins. Aggressive forehands and a competitive streak that may see either (un)ceremoniously bench their doubles pair across the week in an attempt to trade up." },
+  "Heidi Begala":      { rating:4, bio:"If the Williams sisters were twins, had blonde hair, green eyes and grew up with a tennis court in their back garden, then you could easily draw comparisons to the Begala Twins. Aggressive forehands and a competitive streak that may see either (un)ceremoniously bench their doubles pair across the week in an attempt to trade up." },
+  "Annemarie Muir":    { rating:4, bio:"Canon-Marie. Deceptively good baseline wall who quietly dominates her partner. A stand and deliver approach, combining traditional power with very unorthodox shots. Can move well around the court if required but would rather not if this will interrupt a chat or a laugh." },
+  "James Storey":      { rating:4, bio:"Like a young Martin Safin from the early 2000's at the peak of his abilities, but 20 years on. If he can keep his shoulder in place, he could go deep. However don't be surprised if he withdraws due to a scheduling conflict." },
+  "Lucy McFarlane":    { rating:4, bio:"Caroline Wozniacki's budget doppelgänger with an unpredictable backhand. Strong on enthusiasm, fiery temper, execution requires development." },
+  "Courtney Dettrich": { rating:3, bio:"American enthusiasm guaranteed. Results not. Travelling without bub, expect Corn to let her (considerably voluminous) hair down, which may adversely impact form over the course of the week." },
+  "Nick Crawford":     { rating:3, bio:"Last seen on the courts of the Goodwood Orphanage in c. 2007, which may be the last time he held a racquet. If you ask him, he is likely to go out in the first round so he can enjoy tennis the way it should be — from the sidelines with a Pimms in hand, after adopting the UK as his home." },
+  "Dan Horne":         { rating:3, bio:"Strong contender for best beard at the wedding. Proud founder of the South Lantau Useless Tennis Society (SLUT Cup). With a forehand that's undeniably strong but alarmingly adventurous, every swing is influenced by an unshakeable squash heritage — balls fly hard, but not always where they're supposed to go." },
+  "Erin Depledge":     { rating:3, bio:"Knows more ATP and WTA stats than she'll ever let on. Has followed both tours with the dedication of someone who should probably have a media accreditation. Deeply invested in Matteo Berrettini — somewhat concerning given he bears an uncanny resemblance to her husband's best mate, Alfred." },
+  "Matilda Leishman":  { rating:3, bio:"Former Pair 1 seed at school. 15-year racquet sabbatical. Recently walked on court convinced she'd finally beat her husband at something. Left as living proof that confidence and ability are different sports." },
+  "Matt Schulte":      { rating:3, bio:"The modern day Rockhampton Rocket, sans hair and 2 grand slams. High athletic ability. Short fuse. Coming direct from the home of Rafael Nadal, one can only assume he has been honing his craft on the clay courts of Mallorca in preparation for the Dionysos Open." },
+  "Barbara Cassani":   { rating:3, bio:"Led the London Olympics bid. Equestrian competitor. If tennis was played on horseback, you'd be pencilling her in to be holding the trophy come Friday afternoon. Elite sport is in her DNA. Will not go out without a fight." },
+  "Georgia Welsh":     { rating:3, bio:"Can hit a ball over the net, but by no means an experienced player. More likely to be focussed on the regular drink breaks than the opposing team's serve. That being said, she is the oldest of four siblings so can become unexpectedly competitive if the mood strikes." },
+  "Lauren Gathercole": { rating:3, bio:"Tipped for a promising tennis career after agreeing to take up tennis with her husband as 'their sport'. Career has been on an extended hiatus ever since. Without doubt the kindest person that will take the court this week. Frustratingly good at getting the ball back to almost impossible spots to return from." },
+  "Kelli Ng":          { rating:3, bio:"Can be found waiting for her husband to return from his 100km run on any given morning. Kelli proves that patience is indeed a virtue. Packs a backhand that strikes like a bolt from the sky. Her serve terrifies anyone standing nearby." },
+  "Dee Murray":        { rating:3, bio:"South Lantau's favourite pocket rocket. Has joined the Dionysos Open in hope of a well-earned break from babysitting her renegade partner in recent months. Levels of enthusiasm unparalleled. Expect Dee to go hard early, then relax with drink in hand if things do not go her way." },
+  "Josie Di Giovanni": { rating:3, bio:"Begged her husband to practice with her in advance of her Open debut. Chivalry well and truly walked out the door upon such request, in fear of preparing his opponents to bring upon his own downfall. Watch out for a mis-timed baseline shot-turned drop shot — Jose's secret weapon." },
+  "Alexis Heim":       { rating:3, bio:"Hailing from the leafy north-eastern suburbs of Adelaide, the affectionately known 'Poos' grew up with a tennis court in her backyard. She's since swapped suburban life for a life on the farm, but has kept herself in peak condition with a reformer machine at home in preparation for the Dionysos Open." },
+  "Lydia Turman":      { rating:2, bio:"Would rather be on the sunlounger with her Kindle. Is convinced she can persuade her partner to tank, akin to the Dees of 2009, and bomb out in the early rounds to facilitate this." },
+  "Sarah Simpson":     { rating:2, bio:"Allegedly coached by Wayne Arthur's uncles brother's best friend (or was it Uncle Arthur?). A product of Loreto Mandeville Hall — Melbourne's finest girls' school — where the only thing her parents didn't see coming was the boy from the west. Quick-witted and cool under pressure, she has shown the patience to manage Michael both on and off the court. Tournament officials confirm there is one person in the relationship who wears the pants. We will let you decide." },
+};
+
+// ============================================================
+// TEAM → PLAYERS MAPPING
+// ============================================================
+const TEAM_PLAYERS = {
+  P1:  ["Bo O'Brien",       "Sarah Simpson"],
+  P2:  ["James Carlile",    "Lydia Turman"],
+  P4:  ["Max Leishman",     "Annemarie Muir"],
+  P5:  ["Jordan Sanders",   "Josie Di Giovanni"],
+  P6:  ["Blake Sanders",    "Dee Murray"],
+  P7:  ["Ross Michelle",    "Lucy McFarlane"],
+  P8:  ["Phil Wylie",       "Kelli Ng"],
+  P9:  ["Chris Barratt",    "Lauren Gathercole"],
+  P10: ["Scott Elliss",     "Georgia Welsh"],
+  P11: ["Darcy Bateman",    "Barbara Cassani"],
+  P12: ["Jack Whiting",     "Matilda Leishman"],
+  P13: ["Thomas Liew",      "Erin Depledge"],
+  P14: ["Jeremy Fry",       "Dan Horne"],
+  P15: ["Nathan Scarfo",    "James Storey"],
+  P16: ["Tom Crump",        "Alexis Heim"],
+  P17: ["Jack Leishman",    "Nick Crawford"],
+  P18: ["Dave Franks",      "Courtney Dettrich"],
+  P19: ["Peter Littleyuile","Jane Hale"],
+  P20: ["Guy Davis",        "Heidi Begala"],
+  P21: ["Matt Schulte",     "Maddie Begala"],
+  P22: ["Lance Canavan",    "Libby Littleyuile"],
+  P23: ["Marius Lammers",   "Jack Howard"],
+  P24: ["Anthony Stewart",  "Declan Sayce"],
+};
+
+// ============================================================
+// DATA HELPERS
+// ============================================================
 function team(id){ return {type:'team', id}; }
 function winnerOf(of){ return {type:'winner', of}; }
 function rank(n){ return {type:'rank', n}; }
 
+// ============================================================
+// MATCHES  (11 × R24 + P1 seeded into RO12-F)
+// ============================================================
 const matches = {
-  'R24-1':  {round:'R24', a:team('P9'),        b:team('P12'),        when:'Tue 1 Sep · Afternoon'},
-  'R24-2':  {round:'R24', a:team('P22'),       b:team('P14'),        when:'Tue 1 Sep · Afternoon'},
-  'R24-3':  {round:'R24', a:team('P2'),        b:team('P4'),         when:'Wed 2 Sep · Morning'},
-  'R24-4':  {round:'R24', a:team('P6'),        b:team('P17'),        when:'Wed 2 Sep · Morning'},
-  'R24-5':  {round:'R24', a:team('P7'),        b:team('P8'),         when:'Wed 2 Sep · Afternoon'},
-  'R24-6':  {round:'R24', a:team('P13'),       b:team('P15'),        when:'Wed 2 Sep · Afternoon'},
-  'R24-7':  {round:'R24', a:team('P16'),       b:team('P21'),        when:'Wed 2 Sep · Afternoon'},
-  'R24-8':  {round:'R24', a:team('P18'),       b:team('P19'),        when:'Thu 3 Sep · Morning'},
-  'R24-9':  {round:'R24', a:team('P5'),        b:team('P10'),        when:'Thu 3 Sep · Morning'},
-  'R24-10': {round:'R24', a:team('P23'),       b:team('P24'),        when:'Fri 4 Sep · Morning'},
-  'R24-11': {round:'R24', a:team('P11'),       b:team('P20'),        when:'Fri 4 Sep · Morning'},
+  'R24-1':  {round:'R24',   a:team('P9'),        b:team('P12'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R24-2':  {round:'R24',   a:team('P22'),       b:team('P14'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Tue 1 Sep · Afternoon'},
+  'R24-3':  {round:'R24',   a:team('P2'),        b:team('P4'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R24-4':  {round:'R24',   a:team('P6'),        b:team('P17'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Morning'},
+  'R24-5':  {round:'R24',   a:team('P7'),        b:team('P8'),        scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-6':  {round:'R24',   a:team('P13'),       b:team('P15'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-7':  {round:'R24',   a:team('P16'),       b:team('P21'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Wed 2 Sep · Afternoon'},
+  'R24-8':  {round:'R24',   a:team('P18'),       b:team('P19'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R24-9':  {round:'R24',   a:team('P5'),        b:team('P10'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Thu 3 Sep · Morning'},
+  'R24-10': {round:'R24',   a:team('P23'),       b:team('P24'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'R24-11': {round:'R24',   a:team('P11'),       b:team('P20'),       scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
 
-  'RO12-A': {round:'RO12', a:winnerOf('R24-1'), b:winnerOf('R24-2'),  when:'Fri 4 Sep · Morning'},
-  'RO12-B': {round:'RO12', a:winnerOf('R24-3'), b:winnerOf('R24-4'),  when:'Fri 4 Sep · Morning'},
-  'RO12-C': {round:'RO12', a:winnerOf('R24-5'), b:winnerOf('R24-6'),  when:'Fri 4 Sep · Morning'},
-  'RO12-D': {round:'RO12', a:winnerOf('R24-7'), b:winnerOf('R24-8'),  when:'Fri 4 Sep · Morning'},
-  'RO12-E': {round:'RO12', a:winnerOf('R24-9'), b:winnerOf('R24-10'), when:'Fri 4 Sep · Morning'},
-  'RO12-F': {round:'RO12', a:team('P1'),         b:winnerOf('R24-11'), when:'Fri 4 Sep · Morning'},
+  'RO12-A': {round:'RO12',  a:winnerOf('R24-1'), b:winnerOf('R24-2'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-B': {round:'RO12',  a:winnerOf('R24-3'), b:winnerOf('R24-4'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-C': {round:'RO12',  a:winnerOf('R24-5'), b:winnerOf('R24-6'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-D': {round:'RO12',  a:winnerOf('R24-7'), b:winnerOf('R24-8'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-E': {round:'RO12',  a:winnerOf('R24-9'), b:winnerOf('R24-10'),scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
+  'RO12-F': {round:'RO12',  a:team('P1'),         b:winnerOf('R24-11'),scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Morning'},
 
-  'REP1':   {round:'REP', a:rank(5), b:rank(8), when:'Fri 4 Sep · Afternoon'},
-  'REP2':   {round:'REP', a:rank(6), b:rank(7), when:'Fri 4 Sep · Afternoon'},
+  'REP1':  {round:'REP',   a:rank(5), b:rank(8), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'REP2':  {round:'REP',   a:rank(6), b:rank(7), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
 
-  'QF1':    {round:'QF', a:rank(3), b:winnerOf('REP1'), when:'Fri 4 Sep · Afternoon'},
-  'QF2':    {round:'QF', a:rank(4), b:winnerOf('REP2'), when:'Fri 4 Sep · Afternoon'},
+  'QF1':   {round:'QF',    a:rank(3), b:winnerOf('REP1'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'QF2':   {round:'QF',    a:rank(4), b:winnerOf('REP2'), scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
 
-  'SF1':    {round:'SF', a:rank(1), b:winnerOf('QF1'), when:'Fri 4 Sep · Afternoon'},
-  'SF2':    {round:'SF', a:rank(2), b:winnerOf('QF2'), when:'Fri 4 Sep · Afternoon'},
+  'SF1':   {round:'SF',    a:rank(1), b:winnerOf('QF1'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
+  'SF2':   {round:'SF',    a:rank(2), b:winnerOf('QF2'),  scoreA:null,scoreB:null,tbA:null,tbB:null, when:'Fri 4 Sep · Afternoon'},
 
-  'FINAL':  {round:'FINAL', a:winnerOf('SF1'), b:winnerOf('SF2'), when:'Fri 4 Sep · Late Afternoon'},
+  'FINAL': {round:'FINAL', a:winnerOf('SF1'), b:winnerOf('SF2'),
+            s1A:null,s1B:null,s2A:null,s2B:null,mbA:null,mbB:null, when:'Fri 4 Sep · Late Afternoon'},
 };
 
 const RO12_ORDER = ['RO12-A','RO12-B','RO12-C','RO12-D','RO12-E','RO12-F'];
 
-const CONNECTORS = [
-  ['card-R24-1', 'slot-RO12-A-A'], ['card-R24-2', 'slot-RO12-A-B'],
-  ['card-R24-3', 'slot-RO12-B-A'], ['card-R24-4', 'slot-RO12-B-B'],
-  ['card-R24-5', 'slot-RO12-C-A'], ['card-R24-6', 'slot-RO12-C-B'],
-  ['card-R24-7', 'slot-RO12-D-A'], ['card-R24-8', 'slot-RO12-D-B'],
-  ['card-R24-9', 'slot-RO12-E-A'], ['card-R24-10','slot-RO12-E-B'],
-  ['card-R24-11','slot-RO12-F-B'],
-  ['card-REP1',  'slot-QF1-B'],    ['card-REP2',  'slot-QF2-B'],
-  ['card-QF1',   'slot-SF1-B'],    ['card-QF2',   'slot-SF2-B'],
-  ['card-SF1',   'slot-FINAL-A'],  ['card-SF2',   'slot-FINAL-B'],
+const ELBOWS = [
+  {from:['card-R24-1',  'card-R24-2'],  to:'card-RO12-A'},
+  {from:['card-R24-3',  'card-R24-4'],  to:'card-RO12-B'},
+  {from:['card-R24-5',  'card-R24-6'],  to:'card-RO12-C'},
+  {from:['card-R24-7',  'card-R24-8'],  to:'card-RO12-D'},
+  {from:['card-R24-9',  'card-R24-10'], to:'card-RO12-E'},
+  {from:['card-R24-11'],               to:'card-RO12-F'},
+  {from:['card-REP1'],                 to:'card-QF1'},
+  {from:['card-REP2'],                 to:'card-QF2'},
+  {from:['card-QF1'],                  to:'card-SF1'},
+  {from:['card-QF2'],                  to:'card-SF2'},
+  {from:['card-SF1',   'card-SF2'],    to:'card-FINAL'},
 ];
+
+// ============================================================
+// RESOLUTION ENGINE
+// ============================================================
+let ranking = null;
+
+function teamName(id){ return id ? TEAMS[id] : ''; }
+
+function resolveSlot(slot){
+  if(slot.type === 'team'){
+    return {teamId:slot.id, label:teamName(slot.id), ready:true};
+  }
+  if(slot.type === 'winner'){
+    const m = matches[slot.of];
+    const w = getWinner(m);
+    if(w) return {teamId:w, label:teamName(w), ready:true};
+    return {teamId:null, label:`Winner — ${slot.of.replace('R24-','R22-')}`, ready:false};
+  }
+  if(slot.type === 'rank'){
+    if(!ranking) return {teamId:null, label:`Seed: Rank ${slot.n}`, ready:false};
+    const teamId = ranking[slot.n-1] || null;
+    if(!teamId) return {teamId:null, label:`Seed: Rank ${slot.n}`, ready:false};
+    return {teamId, label:teamName(teamId), ready:true};
+  }
+}
+
+function setWinnerSide(gA, gB){
+  if(gA == null || gB == null || gA === gB) return null;
+  return gA > gB ? 'A' : 'B';
+}
+
+function getWinner(m){
+  const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+  if(!aSlot.ready || !bSlot.ready) return null;
+  const aId = aSlot.teamId, bId = bSlot.teamId;
+
+  if(m.round === 'FINAL'){
+    const s1W = setWinnerSide(m.s1A, m.s1B);
+    const s2W = setWinnerSide(m.s2A, m.s2B);
+    if(!s1W || !s2W) return null;
+    if(s1W === s2W) return s1W === 'A' ? aId : bId;
+    if(m.mbA == null || m.mbB == null || m.mbA === m.mbB) return null;
+    return m.mbA > m.mbB ? aId : bId;
+  }
+
+  const tieAt = m.round === 'SF' ? 6 : 2;
+  const {scoreA, scoreB, tbA, tbB} = m;
+  if(scoreA == null || scoreB == null) return null;
+  if(scoreA === scoreB){
+    if(scoreA === tieAt){
+      if(tbA == null || tbB == null || tbA === tbB) return null;
+      return tbA > tbB ? aId : bId;
+    }
+    return null;
+  }
+  return scoreA > scoreB ? aId : bId;
+}
+
+function computeRanking(){
+  const entries = [];
+  for(let i=0;i<RO12_ORDER.length;i++){
+    const id = RO12_ORDER[i];
+    const m = matches[id];
+    const w = getWinner(m);
+    if(!w) return null;
+    const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+    const aIsWinner = (w === aSlot.teamId);
+    const winnerGames = aIsWinner ? m.scoreA : m.scoreB;
+    const loserGames  = aIsWinner ? m.scoreB : m.scoreA;
+    const loserId = aIsWinner ? bSlot.teamId : aSlot.teamId;
+    entries.push({teamId:w,       games:winnerGames, isWinner:true,  idx:i});
+    entries.push({teamId:loserId, games:loserGames,  isWinner:false, idx:i});
+  }
+  entries.sort((x,y)=> y.games-x.games || (x.isWinner===y.isWinner?0:(x.isWinner?-1:1)) || x.idx-y.idx);
+  return entries.map(e=>e.teamId);
+}
+
+// ============================================================
+// SCORE SECTION BUILDERS
+// ============================================================
+function buildTbRow(id, m, isSF){
+  const label = isSF ? 'Set tiebreak' : 'Tiebreak';
+  if(IS_ADMIN){
+    return `<div class="tb-row">
+      <span class="tb-label">${label}</span>
+      <input class="score-box tb-box" type="number" min="0" max="7" inputmode="numeric"
+        id="score-${id}-tbA" data-match="${id}" data-side="tbA"
+        value="${m.tbA==null?'':m.tbA}">
+      <span class="tb-sep">–</span>
+      <input class="score-box tb-box" type="number" min="0" max="7" inputmode="numeric"
+        id="score-${id}-tbB" data-match="${id}" data-side="tbB"
+        value="${m.tbB==null?'':m.tbB}">
+    </div>`;
+  }
+  if(m.tbA != null && m.tbB != null){
+    return `<div class="tb-row">
+      <span class="tb-label">${label}</span>
+      <span class="tb-score">${m.tbA}–${m.tbB}</span>
+    </div>`;
+  }
+  return '';
+}
+
+function buildFinalSection(id, m){
+  const {s1A,s1B,s2A,s2B,mbA,mbB} = m;
+  const s1W = setWinnerSide(s1A, s1B);
+  const s2W = setWinnerSide(s2A, s2B);
+  const isDecider = s1W && s2W && s1W !== s2W;
+
+  if(IS_ADMIN){
+    const set1 = `<div class="final-set-row">
+      <span class="set-label">Set 1</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s1A" data-match="${id}" data-side="s1A" value="${s1A==null?'':s1A}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s1B" data-match="${id}" data-side="s1B" value="${s1B==null?'':s1B}">
+    </div>`;
+    const set2 = s1W ? `<div class="final-set-row">
+      <span class="set-label">Set 2</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s2A" data-match="${id}" data-side="s2A" value="${s2A==null?'':s2A}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-s2B" data-match="${id}" data-side="s2B" value="${s2B==null?'':s2B}">
+    </div>` : '';
+    const mtb = isDecider ? `<div class="final-set-row">
+      <span class="set-label">Match TB</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-mbA" data-match="${id}" data-side="mbA" value="${mbA==null?'':mbA}">
+      <span class="set-sep">–</span>
+      <input class="score-box" type="number" min="0" inputmode="numeric"
+        id="score-${id}-mbB" data-match="${id}" data-side="mbB" value="${mbB==null?'':mbB}">
+    </div>` : '';
+    return `<div class="final-score-section">${set1}${set2}${mtb}</div>`;
+  }
+
+  if(!s1W) return '';
+  const parts = [`${s1A}–${s1B}`];
+  if(s2W) parts.push(`${s2A}–${s2B}`);
+  if(isDecider && mbA != null && mbB != null) parts.push(`[${mbA}–${mbB}]`);
+  return `<div class="final-score-section"><span class="final-score-pub">${parts.join(', ')}</span></div>`;
+}
 
 // ============================================================
 // RENDER
 // ============================================================
-function resolveLabel(slot){
-  if(slot.type === 'team') return PAIRS[slot.id];
-  if(slot.type === 'winner') return `Winner — ${slot.of}`;
-  if(slot.type === 'rank') return `Seed: Rank ${slot.n}`;
-}
-
-function slotRow(slot, side, id){
-  const isTeam = slot.type === 'team';
-  const label = resolveLabel(slot);
-  const cls = isTeam ? 'hidden-pair' : 'pending';
-  return `<div class="slot-row ${cls}" id="slot-${id}-${side}">
-    <span class="slot-name">${label}</span>
-  </div>`;
-}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function matchCard(id){
   const m = matches[id];
-  const isFinal = m.round === 'FINAL';
-  const tagText = isFinal ? '🏆 GRAND FINAL' : id;
+  const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+  const bothReady = aSlot.ready && bSlot.ready;
+  const winner = bothReady ? getWinner(m) : null;
+  const isFinal  = m.round === 'FINAL';
+  const isSF     = m.round === 'SF';
+  const isFast4  = !isFinal && !isSF;
+  const tagText = isFinal ? '🏆 GRAND FINAL' : id.replace('R24-', 'R22-');
 
-  return `<div class="match-card ${isFinal?'final-card':''}" id="card-${id}">
+  function slotRow(slot, side){
+    const scoreVal = m['score' + side];
+    const cls = !bothReady ? 'pending'
+      : slot.teamId === winner ? 'winner'
+      : winner ? 'loser' : '';
+    const trophy = winner === slot.teamId ? `<span class="trophy">🏆</span>` : '';
+
+    const canClick = slot.teamId && TEAM_PLAYERS[slot.teamId];
+    const nameHtml = canClick
+      ? `<span class="slot-name slot-name-link" data-team="${slot.teamId}">${escHtml(slot.label)}${trophy}</span>`
+      : `<span class="slot-name">${escHtml(slot.label)}${trophy}</span>`;
+
+    let scoreEl = '';
+    if(bothReady && !isFinal){
+      if(IS_ADMIN){
+        const maxVal = isSF ? 7 : 4;
+        scoreEl = `<input class="score-box" type="number" min="0" max="${maxVal}" inputmode="numeric"
+          id="score-${id}-${side}" data-match="${id}" data-side="score${side}"
+          value="${scoreVal==null?'':scoreVal}">`;
+      } else if(scoreVal != null){
+        scoreEl = `<span class="score-display">${scoreVal}</span>`;
+      }
+    }
+
+    return `<div class="slot-row ${cls}" id="slot-${id}-${side}">
+      ${nameHtml}
+      ${scoreEl}
+    </div>`;
+  }
+
+  let tbRow = '';
+  if(bothReady && !isFinal){
+    const tieAt = isSF ? 6 : 2;
+    if(m.scoreA === tieAt && m.scoreB === tieAt) tbRow = buildTbRow(id, m, isSF);
+  }
+
+  const finalSection = (isFinal && bothReady) ? buildFinalSection(id, m) : '';
+
+  let tieWarn = '';
+  if(IS_ADMIN && bothReady && !isFinal && m.scoreA != null && m.scoreB != null){
+    const tieAt = isSF ? 6 : 2;
+    if(m.scoreA === m.scoreB && m.scoreA !== tieAt){
+      tieWarn = `<div class="tie-warn">Scores can't be equal here — please correct.</div>`;
+    }
+  }
+
+  let champion = '';
+  if(isFinal && winner){
+    champion = `<div class="champion-banner">🏆 ${escHtml(teamName(winner))}<br><span style="font-size:11px;font-weight:400;">Dionysos Open Champions</span></div>`;
+  }
+
+  return `<div class="match-card ${isFinal?'final-card':''} ${winner?'complete':''}" id="card-${id}">
     <div class="tag"><span>${tagText}</span><span class="tag-time">${m.when}</span></div>
-    ${slotRow(m.a, 'A', id)}
-    ${slotRow(m.b, 'B', id)}
-  </div>`;
+    ${slotRow(aSlot,'A')}
+    ${slotRow(bSlot,'B')}
+    ${tbRow}
+    ${finalSection}
+    ${tieWarn}
+  </div>
+  ${champion}`;
 }
 
 function rankingColumnHTML(){
+  if(!ranking){
+    const done = RO12_ORDER.filter(id => getWinner(matches[id])).length;
+    return `<div class="col-head">Rankings</div>
+      <div class="col-sub">Seeds the Repechage &amp; Quarterfinal once all 6 Round of 12 matches are in.</div>
+      <div class="match-card"><div class="pending-note">Waiting on Round of 12 — ${done}/6 matches complete.</div></div>`;
+  }
   const bands = [
     {max:2,  cls:'rank-bye', label:'bye → SF'},
     {max:4,  cls:'rank-qf',  label:'→ QF'},
@@ -310,13 +821,21 @@ function rankingColumnHTML(){
   ];
   function bandFor(n){ return bands.find(b=>n<=b.max); }
 
-  const rows = Array.from({length:12},(_,i)=>{
+  const gamesByTeam = {};
+  RO12_ORDER.forEach(id=>{
+    const m = matches[id];
+    const aSlot = resolveSlot(m.a), bSlot = resolveSlot(m.b);
+    if(aSlot.teamId) gamesByTeam[aSlot.teamId] = m.scoreA;
+    if(bSlot.teamId) gamesByTeam[bSlot.teamId] = m.scoreB;
+  });
+
+  const rows = ranking.map((tid,i)=>{
     const n = i+1;
     const b = bandFor(n);
     return `<div class="rank-row ${b.cls}" id="rank-row-${n}">
       <span class="n">#${n}</span>
-      <span style="color:var(--muted);font-style:italic;font-size:12px;">TBD</span>
-      <span class="g">${b.label}</span>
+      <span>${escHtml(teamName(tid))}</span>
+      <span class="g">${gamesByTeam[tid]}g · ${b.label}</span>
     </div>`;
   }).join('');
 
@@ -329,6 +848,8 @@ function rankingColumnHTML(){
 }
 
 function render(){
+  ranking = computeRanking();
+
   const col = (title, sub, bodyHTML) => `<div class="col">
     <div class="col-head">${title}</div>
     ${sub?`<div class="col-sub">${sub}</div>`:''}
@@ -348,40 +869,225 @@ function render(){
 
   document.getElementById('columns').innerHTML = colsHTML;
   requestAnimationFrame(drawConnectors);
+  renderProfiles();
 }
 
+// ============================================================
+// CONNECTORS — elbow style
+// ============================================================
 function drawConnectors(){
   const svg = document.getElementById('connSvg');
   const inner = document.getElementById('bracketInner');
   if(window.innerWidth < 900){ svg.innerHTML=''; return; }
 
   const wrapRect = inner.getBoundingClientRect();
-  const w = inner.scrollWidth, h = inner.scrollHeight;
-  svg.setAttribute('width', w);
-  svg.setAttribute('height', h);
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const W = inner.scrollWidth, H = inner.scrollHeight;
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  function r(n){ return Math.round(n * 10) / 10; }
 
   let paths = '';
-  CONNECTORS.forEach(([fromId,toId])=>{
-    const fromEl = document.getElementById(fromId);
-    const toEl   = document.getElementById(toId);
-    if(!fromEl || !toEl) return;
-    const fr = fromEl.getBoundingClientRect();
-    const tr = toEl.getBoundingClientRect();
-    const x1 = fr.right  - wrapRect.left;
-    const y1 = fr.top    - wrapRect.top + fr.height/2;
-    const x2 = tr.left   - wrapRect.left;
-    const y2 = tr.top    - wrapRect.top + tr.height/2;
-    const cp = (x2-x1) * 0.45;
-    paths += `<path class="conn-line" d="M ${x1} ${y1} C ${x1+cp} ${y1} ${x2-cp} ${y2} ${x2} ${y2}"/>`;
+
+  ELBOWS.forEach(({from, to}) => {
+    const toEl = document.getElementById(to);
+    if(!toEl) return;
+    const fromEls = from.map(id => document.getElementById(id)).filter(Boolean);
+    if(!fromEls.length) return;
+
+    const toR  = toEl.getBoundingClientRect();
+    const x2   = r(toR.left - wrapRect.left);
+    const toCY = r(toR.top  - wrapRect.top + toR.height / 2);
+    const done = fromEls.some(el => el.classList.contains('complete'));
+    const cls  = 'conn-line' + (done ? ' done' : '');
+
+    if(fromEls.length === 1){
+      // Single connector — L-shaped elbow
+      const fr  = fromEls[0].getBoundingClientRect();
+      const x1  = r(fr.right - wrapRect.left);
+      const y1  = r(fr.top   - wrapRect.top + fr.height / 2);
+      const mx  = r((x1 + x2) / 2);
+      const d   = Math.abs(y1 - toCY) < 2
+        ? `M ${x1} ${y1} H ${x2}`
+        : `M ${x1} ${y1} H ${mx} V ${toCY} H ${x2}`;
+      paths += `<path class="${cls}" d="${d}"/>`;
+    } else {
+      // Pair connector — classic tournament bracket elbow
+      //   card1 ——|
+      //            |—— target
+      //   card2 ——|
+      const fr1  = fromEls[0].getBoundingClientRect();
+      const fr2  = fromEls[fromEls.length - 1].getBoundingClientRect();
+      const x1a  = r(fr1.right - wrapRect.left);
+      const y1   = r(fr1.top   - wrapRect.top + fr1.height / 2);
+      const x1b  = r(fr2.right - wrapRect.left);
+      const y2   = r(fr2.top   - wrapRect.top + fr2.height / 2);
+      const mx   = r((Math.max(x1a, x1b) + x2) / 2);
+      const midY = r((y1 + y2) / 2);
+      // Two horizontals meeting the stem + vertical bar + horizontal to target
+      const d = `M ${x1a} ${y1} H ${mx} V ${y2} M ${x1b} ${y2} H ${mx} M ${mx} ${midY} H ${x2}`;
+      paths += `<path class="${cls}" d="${d}"/>`;
+    }
   });
+
   svg.innerHTML = paths;
 }
+
+// ============================================================
+// PROFILES SECTION
+// ============================================================
+function renderProfiles(){
+  const playerTeam = {};
+  Object.entries(TEAM_PLAYERS).forEach(([tid, players])=>{
+    players.forEach(p=>{ playerTeam[p] = tid; });
+  });
+
+  const sorted = Object.keys(PROFILES).sort((a,b)=>{
+    const aL = a.split(' ').slice(-1)[0];
+    const bL = b.split(' ').slice(-1)[0];
+    return aL.localeCompare(bL);
+  });
+
+  const cards = sorted.map(name=>{
+    const p = PROFILES[name];
+    const tid = playerTeam[name];
+    const pairNum = tid ? tid.replace('P','') : '';
+    const partner = tid ? TEAM_PLAYERS[tid].find(n=>n!==name) : '';
+    const pairLabel = pairNum ? `Pair ${pairNum}${partner?' · with '+partner:''}` : '';
+    return `<div class="profile-card">
+      <div class="pc-header">
+        <div>
+          <div class="pc-name">${escHtml(name)}</div>
+          ${pairLabel?`<div class="pc-pair">${escHtml(pairLabel)}</div>`:''}
+        </div>
+      </div>
+      ${p.bio
+        ? `<div class="pc-bio">${escHtml(p.bio)}</div>`
+        : `<div class="pc-no-bio">Profile coming soon.</div>`}
+    </div>`;
+  }).join('');
+
+  document.getElementById('profilesGrid').innerHTML = cards;
+}
+
+// ============================================================
+// PROFILE MODAL
+// ============================================================
+function openProfile(teamId){
+  if(!teamId || !TEAM_PLAYERS[teamId]) return;
+  const players = TEAM_PLAYERS[teamId];
+  document.getElementById('profileModalTitle').textContent = TEAMS[teamId];
+  document.getElementById('profileModalBody').innerHTML = players.map(name=>{
+    const p = PROFILES[name] || {bio:''};
+    return `<div class="player-card-modal">
+      <div class="pcm-name">${escHtml(name)}</div>
+      ${p.bio
+        ? `<div class="pcm-bio">${escHtml(p.bio)}</div>`
+        : `<div class="pcm-no-bio">Profile coming soon.</div>`}
+    </div>`;
+  }).join('');
+  document.getElementById('profileModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeProfile(){
+  document.getElementById('profileModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// ============================================================
+// FIREBASE SYNC
+// ============================================================
+const saveTimers = {};
+
+function saveToFirebase(matchId){
+  if(!IS_ADMIN) return;
+  clearTimeout(saveTimers[matchId]);
+  saveTimers[matchId] = setTimeout(()=>{
+    const m = matches[matchId];
+    const data = m.round === 'FINAL'
+      ? {s1A:m.s1A, s1B:m.s1B, s2A:m.s2A, s2B:m.s2B, mbA:m.mbA, mbB:m.mbB}
+      : {scoreA:m.scoreA, scoreB:m.scoreB, tbA:m.tbA, tbB:m.tbB};
+    db.collection('scores').doc(matchId).set(data);
+  }, 400);
+}
+
+db.collection('scores').onSnapshot(snapshot=>{
+  snapshot.forEach(docSnap=>{
+    const id = docSnap.id;
+    if(!matches[id]) return;
+    Object.assign(matches[id], docSnap.data());
+  });
+  render();
+});
+
+// ============================================================
+// EVENT HANDLERS
+// ============================================================
+document.getElementById('columns').addEventListener('click', e=>{
+  const link = e.target.closest('.slot-name-link');
+  if(link){ openProfile(link.dataset.team); return; }
+});
+
+document.getElementById('columns').addEventListener('input', e=>{
+  const t = e.target;
+  if(!t.classList.contains('score-box') || !IS_ADMIN) return;
+
+  const matchId = t.dataset.match;
+  const side    = t.dataset.side;
+  let   val     = t.value === '' ? null : Math.max(0, parseInt(t.value,10));
+  if(val != null && isNaN(val)) val = null;
+  matches[matchId][side] = val;
+
+  const m = matches[matchId];
+  if(val != null && !['SF','FINAL'].includes(m.round)){
+    if(side === 'scoreA' && m.scoreB != null && val + m.scoreB > 4){
+      val = Math.max(0, 4 - m.scoreB);
+      matches[matchId].scoreA = val;
+      t.value = val;
+    } else if(side === 'scoreB' && m.scoreA != null && val + m.scoreA > 4){
+      val = Math.max(0, 4 - m.scoreA);
+      matches[matchId].scoreB = val;
+      t.value = val;
+    }
+  }
+
+  saveToFirebase(matchId);
+
+  const activeId = t.id, selStart = t.selectionStart;
+  render();
+  const restore = document.getElementById(activeId);
+  if(restore){ restore.focus(); try{ restore.setSelectionRange(selStart,selStart); }catch(e){} }
+});
+
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  if(!IS_ADMIN || !confirm('Clear every score and reset the whole bracket?')) return;
+  const batch = db.batch();
+  Object.keys(matches).forEach(id=>{
+    const m = matches[id];
+    if(m.round === 'FINAL'){
+      m.s1A=m.s1B=m.s2A=m.s2B=m.mbA=m.mbB=null;
+      batch.set(db.collection('scores').doc(id),{s1A:null,s1B:null,s2A:null,s2B:null,mbA:null,mbB:null});
+    } else {
+      m.scoreA=m.scoreB=m.tbA=m.tbB=null;
+      batch.set(db.collection('scores').doc(id),{scoreA:null,scoreB:null,tbA:null,tbB:null});
+    }
+  });
+  batch.commit();
+  render();
+});
 
 document.getElementById('scrollFinalBtn').addEventListener('click', ()=>{
   const el = document.getElementById('card-FINAL');
   if(el) el.scrollIntoView({behavior:'smooth', inline:'center', block:'center'});
 });
+
+document.getElementById('profileModalClose').addEventListener('click', closeProfile);
+document.getElementById('profileModal').addEventListener('click', e=>{
+  if(e.target === document.getElementById('profileModal')) closeProfile();
+});
+document.addEventListener('keydown', e=>{ if(e.key === 'Escape') closeProfile(); });
 
 let resizeTO;
 window.addEventListener('resize', ()=>{
