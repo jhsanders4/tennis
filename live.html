@@ -599,7 +599,7 @@ function resolveSlot(slot){
     const m = matches[slot.of];
     const w = getWinner(m);
     if(w) return {teamId:w, label:teamName(w), ready:true};
-    return {teamId:null, label:`Winner — ${slot.of}`, ready:false};
+    return {teamId:null, label:`Winner — ${slot.of.replace('R24-','R22-')}`, ready:false};
   }
   if(slot.type === 'rank'){
     if(!ranking) return {teamId:null, label:`Seed: Rank ${slot.n}`, ready:false};
