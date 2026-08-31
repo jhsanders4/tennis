@@ -104,7 +104,7 @@
   .bracket-wrap{ overflow-x:auto; padding:30px 0 10px; margin-top:6px; }
   .bracket-inner{ position:relative; display:inline-block; min-width:100%; padding:0 28px; }
   #connSvg{ position:absolute; top:0; left:0; pointer-events:none; z-index:0; }
-  .columns{ display:flex; gap:54px; position:relative; z-index:1; align-items:flex-start; }
+  .columns{ display:flex; gap:54px; position:relative; z-index:1; align-items:center; }
   .col{ display:flex; flex-direction:column; gap:22px; width:250px; flex:0 0 auto; }
   .col-head{
     font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
@@ -570,16 +570,18 @@ const matches = {
 
 const RO12_ORDER = ['RO12-A','RO12-B','RO12-C','RO12-D','RO12-E','RO12-F'];
 
-const CONNECTORS = [
-  ['card-R24-1', 'slot-RO12-A-A'], ['card-R24-2', 'slot-RO12-A-B'],
-  ['card-R24-3', 'slot-RO12-B-A'], ['card-R24-4', 'slot-RO12-B-B'],
-  ['card-R24-5', 'slot-RO12-C-A'], ['card-R24-6', 'slot-RO12-C-B'],
-  ['card-R24-7', 'slot-RO12-D-A'], ['card-R24-8', 'slot-RO12-D-B'],
-  ['card-R24-9', 'slot-RO12-E-A'], ['card-R24-10','slot-RO12-E-B'],
-  ['card-R24-11','slot-RO12-F-B'],
-  ['card-REP1',  'slot-QF1-B'],    ['card-REP2',  'slot-QF2-B'],
-  ['card-QF1',   'slot-SF1-B'],    ['card-QF2',   'slot-SF2-B'],
-  ['card-SF1',   'slot-FINAL-A'],  ['card-SF2',   'slot-FINAL-B'],
+const ELBOWS = [
+  {from:['card-R24-1',  'card-R24-2'],  to:'card-RO12-A'},
+  {from:['card-R24-3',  'card-R24-4'],  to:'card-RO12-B'},
+  {from:['card-R24-5',  'card-R24-6'],  to:'card-RO12-C'},
+  {from:['card-R24-7',  'card-R24-8'],  to:'card-RO12-D'},
+  {from:['card-R24-9',  'card-R24-10'], to:'card-RO12-E'},
+  {from:['card-R24-11'],               to:'card-RO12-F'},
+  {from:['card-REP1'],                 to:'card-QF1'},
+  {from:['card-REP2'],                 to:'card-QF2'},
+  {from:['card-QF1'],                  to:'card-SF1'},
+  {from:['card-QF2'],                  to:'card-SF2'},
+  {from:['card-SF1',   'card-SF2'],    to:'card-FINAL'},
 ];
 
 // ============================================================
@@ -869,7 +871,7 @@ function render(){
 }
 
 // ============================================================
-// CONNECTORS
+// CONNECTORS — elbow style
 // ============================================================
 function drawConnectors(){
   const svg = document.getElementById('connSvg');
@@ -877,26 +879,56 @@ function drawConnectors(){
   if(window.innerWidth < 900){ svg.innerHTML=''; return; }
 
   const wrapRect = inner.getBoundingClientRect();
-  const w = inner.scrollWidth, h = inner.scrollHeight;
-  svg.setAttribute('width', w);
-  svg.setAttribute('height', h);
-  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  const W = inner.scrollWidth, H = inner.scrollHeight;
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  function r(n){ return Math.round(n * 10) / 10; }
 
   let paths = '';
-  CONNECTORS.forEach(([fromId,toId])=>{
-    const fromEl = document.getElementById(fromId);
-    const toEl   = document.getElementById(toId);
-    if(!fromEl || !toEl) return;
-    const fr = fromEl.getBoundingClientRect();
-    const tr = toEl.getBoundingClientRect();
-    const x1 = fr.right  - wrapRect.left;
-    const y1 = fr.top    - wrapRect.top + fr.height/2;
-    const x2 = tr.left   - wrapRect.left;
-    const y2 = tr.top    - wrapRect.top + tr.height/2;
-    const cp = (x2-x1) * 0.45;
-    const done = fromEl.classList.contains('complete') || fromEl.classList.contains('rank-row');
-    paths += `<path class="conn-line ${done?'done':''}" d="M ${x1} ${y1} C ${x1+cp} ${y1} ${x2-cp} ${y2} ${x2} ${y2}"/>`;
+
+  ELBOWS.forEach(({from, to}) => {
+    const toEl = document.getElementById(to);
+    if(!toEl) return;
+    const fromEls = from.map(id => document.getElementById(id)).filter(Boolean);
+    if(!fromEls.length) return;
+
+    const toR  = toEl.getBoundingClientRect();
+    const x2   = r(toR.left - wrapRect.left);
+    const toCY = r(toR.top  - wrapRect.top + toR.height / 2);
+    const done = fromEls.some(el => el.classList.contains('complete'));
+    const cls  = 'conn-line' + (done ? ' done' : '');
+
+    if(fromEls.length === 1){
+      // Single connector — L-shaped elbow
+      const fr  = fromEls[0].getBoundingClientRect();
+      const x1  = r(fr.right - wrapRect.left);
+      const y1  = r(fr.top   - wrapRect.top + fr.height / 2);
+      const mx  = r((x1 + x2) / 2);
+      const d   = Math.abs(y1 - toCY) < 2
+        ? `M ${x1} ${y1} H ${x2}`
+        : `M ${x1} ${y1} H ${mx} V ${toCY} H ${x2}`;
+      paths += `<path class="${cls}" d="${d}"/>`;
+    } else {
+      // Pair connector — classic tournament bracket elbow
+      //   card1 ——|
+      //            |—— target
+      //   card2 ——|
+      const fr1  = fromEls[0].getBoundingClientRect();
+      const fr2  = fromEls[fromEls.length - 1].getBoundingClientRect();
+      const x1a  = r(fr1.right - wrapRect.left);
+      const y1   = r(fr1.top   - wrapRect.top + fr1.height / 2);
+      const x1b  = r(fr2.right - wrapRect.left);
+      const y2   = r(fr2.top   - wrapRect.top + fr2.height / 2);
+      const mx   = r((Math.max(x1a, x1b) + x2) / 2);
+      const midY = r((y1 + y2) / 2);
+      // Two horizontals meeting the stem + vertical bar + horizontal to target
+      const d = `M ${x1a} ${y1} H ${mx} V ${y2} M ${x1b} ${y2} H ${mx} M ${mx} ${midY} H ${x2}`;
+      paths += `<path class="${cls}" d="${d}"/>`;
+    }
   });
+
   svg.innerHTML = paths;
 }
 
