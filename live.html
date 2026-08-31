@@ -729,7 +729,7 @@ function matchCard(id){
   const isFinal  = m.round === 'FINAL';
   const isSF     = m.round === 'SF';
   const isFast4  = !isFinal && !isSF;
-  const tagText = isFinal ? '🏆 GRAND FINAL' : id;
+  const tagText = isFinal ? '🏆 GRAND FINAL' : id.replace('R24-', 'R22-');
 
   function slotRow(slot, side){
     const scoreVal = m['score' + side];
