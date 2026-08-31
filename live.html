@@ -918,7 +918,6 @@ function renderProfiles(){
           <div class="pc-name">${escHtml(name)}</div>
           ${pairLabel?`<div class="pc-pair">${escHtml(pairLabel)}</div>`:''}
         </div>
-        <div class="pc-rating">${p.rating}/7</div>
       </div>
       ${p.bio
         ? `<div class="pc-bio">${escHtml(p.bio)}</div>`
@@ -937,10 +936,9 @@ function openProfile(teamId){
   const players = TEAM_PLAYERS[teamId];
   document.getElementById('profileModalTitle').textContent = TEAMS[teamId];
   document.getElementById('profileModalBody').innerHTML = players.map(name=>{
-    const p = PROFILES[name] || {rating:'?', bio:''};
+    const p = PROFILES[name] || {bio:''};
     return `<div class="player-card-modal">
       <div class="pcm-name">${escHtml(name)}</div>
-      <div class="pcm-rating">Rating: ${p.rating} / 7</div>
       ${p.bio
         ? `<div class="pcm-bio">${escHtml(p.bio)}</div>`
         : `<div class="pcm-no-bio">Profile coming soon.</div>`}
